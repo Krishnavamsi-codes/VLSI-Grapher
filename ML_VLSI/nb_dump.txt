@@ -1,0 +1,386 @@
+# STEP 1: SYSTEM SETUP, DEPENDENCIES, AND COMPILATION
+import os
+print("--- 1. CLEANUP AND SYSTEM SETUP ---")
+
+
+!rm -rf /content/GNN-RE /content/GraphSAINT
+
+
+!apt-get update
+!apt-get install -y perl build-essential libomp-dev
+
+
+print("\n--- 2. CLONING REPOSITORIES ---")
+%cd /content/
+!git clone https://github.com/DfX-NYUAD/GNN-RE.git
+%cd GNN-RE
+!git clone https://github.com/GraphSAINT/GraphSAINT.git
+
+
+print("\n--- 3. INSTALLING PYTORCH AND COMPATIBLE LIBS ---")
+
+!pip install torch torchvision torchaudio
+
+
+!pip install pyyaml==3.12
+
+# 5. Compile GraphSAINT
+print("\n--- 4. COMPILING GRAPHSAINT ---")
+%cd GraphSAINT
+
+!python graphsaint/setup.py build_ext --inplace
+%cd ..
+
+print("\n PHASE 1 COMPLETE: Setup and Compilation successful.")
+---
+# STEP 2: CONFIGURE PATH AND RUN PARSING PIPELINE (RESTORING THE INJECTION) ---
+import os
+import time
+import shutil
+
+print("\n--- 0. ENVIRONMENT RE-INITIALIZATION AND FILE CHECK ---")
+%cd /content/GNN-RE
+
+
+!unzip -o Netlist_to_graph.zip
+
+
+!mv Netlist_to_graph/Parsers/TheCircuit.pm Netlist_to_graph/Parsers/theCircuit.pm 2> /dev/null
+print("✅ Files verified.")
+
+
+
+print("\n--- 5. INJECTING NATIVE PERL MODULE FIX ---")
+
+PERL_SCRIPT_PATH = 'Netlist_to_graph/Parsers/netlist_to_graph_re.pl'
+
+
+with open(PERL_SCRIPT_PATH, 'r') as f:
+    content = f.readlines()
+
+
+INJECT_LINE = 'use FindBin qw($Bin); use lib "$Bin"; require "theCircuit.pm";\n'
+
+if len(content) > 5:
+    content[5] = INJECT_LINE
+else:
+
+    print("CRITICAL ERROR: Perl script content too short to inject fix.")
+    exit()
+
+
+with open(PERL_SCRIPT_PATH, 'w') as f:
+    f.writelines(content)
+print(f"Overwrote Line 6 with native module loading logic in {PERL_SCRIPT_PATH}.")
+
+
+
+
+
+OUTPUT_DIR = './Netlist_to_graph/Graphs_datasets/Interconnected-Modules/'
+!mkdir -p {OUTPUT_DIR}
+%cd {OUTPUT_DIR}
+!cp ../../Parsers/graph_parser.py .
+
+
+INPUT_DIR = '../../Circuits_datasets/Interconnected-Modules'
+
+
+print("\n--- 6a: RUNNING PERL PARSER DIRECTLY ---")
+
+!perl ../../Parsers/netlist_to_graph_re.pl -i {INPUT_DIR} > log_perl.txt
+
+
+print("\n--- 6b: RUNNING PYTHON PARSER ---")
+!python graph_parser.py
+
+
+%cd ../../../
+print("\n PHASE 2 COMPLETE.Parsing ")
+---
+
+
+
+print("--- Active Perl Processes ---")
+!ps aux | grep perl
+
+
+print("\n--- Perl Log Tail (Last 20 lines) ---")
+!tail -n 20 Netlist_to_graph/Graphs_datasets/Interconnected-Modules/log_perl.txt
+
+
+print("\n--- Data File Size Check (Run this cell repeatedly to watch growth) ---")
+!ls -lh Netlist_to_graph/Graphs_datasets/Interconnected-Modules/feat.txt
+---
+#  FINAL DEPENDENCY STABILIZATION AND LAUNCH
+import os
+
+print("--- 1. STABILIZING CORE PYTHON DEPENDENCIES ---")
+
+
+!pip install numpy scipy scikit-learn pyyaml
+
+
+print("\n--- 2. Relaunching Training with Stable Dependencies ---")
+
+
+%cd /content/GNN-RE/GraphSAINT
+
+DATA_PREFIX = '../Netlist_to_graph/Graphs_datasets/Interconnected-Modules'
+CONFIG_FILE = '../TCAD.yml'
+
+
+!python -m graphsaint.pytorch_version.train \
+    --data_prefix {DATA_PREFIX} \
+    --train_config {CONFIG_FILE} \
+    --gpu 0 > log_training_final.txt
+
+
+%cd ..
+
+print("\n--- 3. TRAINING COMPLETE. CHECK LOGS FOR ACCURACY ---")
+
+!tail -n 20 GraphSAINT/log_training_final.txt
+
+print("\n IMPLEMENTATION COMPLETE. Fingers crossed for Test Accuracy!")
+---
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+import os
+
+
+LOG_FILE_PATH = '/content/GNN-RE/GraphSAINT/log_training_final.txt'
+OUTPUT_DIR = '/content/GNN-RE/Analysis_Graphs'
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+print(f"Output directory created: {OUTPUT_DIR}")
+
+
+def parse_training_log(log_path):
+    """
+    Parses the training log file using a robust regex that tolerates whitespace.
+    Focuses on extracting Epoch and Loss, which are critical for the primary graphs.
+    """
+    data = []
+
+
+
+    pattern = re.compile(
+        r"TRAIN \(Ep avg\):\s+loss\s*=\s*(\d+\.\d+).*?"         # Group 1: Train Loss
+        r"VALIDATION:\s+loss\s*=\s*(\d+\.\d+).*?"              # Group 2: Validation Loss
+        r"mic\s*=\s*(\d+\.\d+).*?"                              # Group 3: Validation Micro F1
+        r"Epoch\s*(\d+)",                                       # Group 4: Epoch
+        re.IGNORECASE | re.DOTALL                               # Flags for robustness
+    )
+
+    try:
+        with open(log_path, 'r') as f:
+            log_content = f.read()
+            matches = pattern.findall(log_content)
+    except FileNotFoundError:
+        return pd.DataFrame()
+
+    for match in matches:
+        (train_loss, val_loss, val_mic, epoch) = match
+
+        data.append({
+            'Epoch': int(epoch),
+            'Train_Loss': float(train_loss),
+            'Val_Loss': float(val_loss),
+            'Val_MicroF1': float(val_mic),
+        })
+
+    return pd.DataFrame(data)
+
+
+df = parse_training_log(LOG_FILE_PATH)
+
+if df.empty:
+    print("🛑 ERROR: DataFrame is EMPTY. The log file is likely missing or the format has fundamentally changed.")
+    exit()
+else:
+    print(f"✅ Data parsed successfully. Found {len(df)} epochs.")
+
+
+
+
+# A. Loss Curve
+plt.figure(figsize=(10, 6))
+plt.plot(df['Epoch'], df['Train_Loss'], label='Training Loss', color='blue')
+plt.plot(df['Epoch'], df['Val_Loss'], label='Validation Loss', color='red')
+plt.title('Training Convergence: Loss vs. Epoch', fontsize=16)
+plt.xlabel('Epoch', fontsize=12)
+plt.ylabel('Loss', fontsize=12)
+plt.grid(True, linestyle='--')
+plt.legend()
+loss_path = os.path.join(OUTPUT_DIR, 'A_Loss_Convergence.png')
+plt.savefig(loss_path)
+plt.close()
+print(f" Loss Curve saved to {loss_path}")
+
+
+plt.figure(figsize=(10, 6))
+
+plt.plot(df['Epoch'], df['Val_MicroF1'], label='Validation Micro-F1', color='orange')
+plt.title('Model Performance: Validation Micro-F1 Score vs. Epoch', fontsize=16)
+plt.xlabel('Epoch', fontsize=12)
+plt.ylabel('Micro-F1 Score', fontsize=12)
+plt.grid(True, linestyle='--')
+plt.legend()
+acc_path = os.path.join(OUTPUT_DIR, 'B_Accuracy_Performance.png')
+plt.savefig(acc_path)
+plt.close()
+print(f" Accuracy Curve saved to {acc_path}")
+
+print("\n--- Plotting Complete ---")
+print(f"Check the {OUTPUT_DIR} folder in the file browser for the images.")
+---
+#  CORRECTED CODE TO MODIFY TCAD.YML FOR DEPTH 1
+import yaml
+import os
+
+CONFIG_PATH = '/content/GNN-RE/TCAD.yml'
+
+with open(CONFIG_PATH, 'r') as f:
+    config = yaml.safe_load(f)
+
+
+config['phase'][0]['depth'] = 1
+
+with open(CONFIG_PATH, 'w') as f:
+
+    yaml.dump(config, f, sort_keys=False)
+
+print(" TCAD.yml updated successfully: 'depth' set to 1.")
+
+
+!grep "depth" {CONFIG_PATH}
+---
+#  RUN TRAINING FOR DEPTH 1
+import os
+
+print("\n--- 7. LAUNCHING GRAPHSAINT TRAINING FOR DEPTH 1 ---")
+
+%cd /content/GNN-RE/GraphSAINT
+
+DATA_PREFIX = '../Netlist_to_graph/Graphs_datasets/Interconnected-Modules'
+CONFIG_FILE = '../TCAD.yml'
+
+
+!python -m graphsaint.pytorch_version.train \
+    --data_prefix {DATA_PREFIX} \
+    --train_config {CONFIG_FILE} \
+    --gpu 0 > log_training_depth_1.txt
+
+
+%cd ..
+print(" Depth 1 training launched. Please wait for completion.")
+
+
+print("\n--- Depth 1 Results (Check this output after the cell finishes) ---")
+!tail -n 10 GraphSAINT/log_training_depth_1.txt
+---
+#  TCAD.YML FOR DEPTH 4
+import yaml
+import os
+
+CONFIG_PATH = '/content/GNN-RE/TCAD.yml'
+
+with open(CONFIG_PATH, 'r') as f:
+    config = yaml.safe_load(f)
+
+
+config['phase'][0]['depth'] = 4
+
+with open(CONFIG_PATH, 'w') as f:
+
+    yaml.dump(config, f, sort_keys=False)
+
+print("✅ TCAD.yml updated successfully: 'depth' set to 4.")
+
+
+!grep "depth" {CONFIG_PATH}
+---
+# RUN TRAINING FOR DEPTH 4
+import os
+
+print("\n--- 7. LAUNCHING GRAPHSAINT TRAINING FOR DEPTH 4 ---")
+
+%cd /content/GNN-RE/GraphSAINT
+
+DATA_PREFIX = '../Netlist_to_graph/Graphs_datasets/Interconnected-Modules'
+CONFIG_FILE = '../TCAD.yml'
+
+
+!python -m graphsaint.pytorch_version.train \
+    --data_prefix {DATA_PREFIX} \
+    --train_config {CONFIG_FILE} \
+    --gpu 0 > log_training_depth_4.txt
+
+
+%cd ..
+print(" Depth 4 training launched. Please wait for completion.")
+
+
+print("\n--- Depth 4 Results (Check this output after the cell finishes) ---")
+!tail -n 10 GraphSAINT/log_training_depth_4.txt
+---
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+
+gnn_depths = [1, 2, 4]
+
+
+micro_f1 = [96.0, 97.19, 97.5]
+macro_f1 = [90.9, 95.27, 90.5]
+
+
+training_time_s = [3500, 3696.04, 10500]
+
+
+
+OUTPUT_DIR = '/content/GNN-RE/Analysis_Graphs'
+plt.rcParams['figure.dpi'] = 150
+
+fig, ax1 = plt.subplots(figsize=(8, 6))
+
+color_micro = 'blue'
+color_macro = 'green'
+
+ax1.set_xlabel('GNN Depth', fontsize=12)
+ax1.set_ylabel('Score (%)', fontsize=12)
+ax1.set_ylim(90, 98)
+ax1.set_xticks(gnn_depths)
+
+
+micro_line, = ax1.plot(gnn_depths, micro_f1, marker='o', color=color_micro, label='Micro-F1', linewidth=2)
+macro_line, = ax1.plot(gnn_depths, macro_f1, marker='o', color=color_macro, label='Macro-F1', linewidth=2)
+
+
+
+ax2 = ax1.twinx()
+color_time = 'purple'
+ax2.set_ylabel('Training Time (s)', color=color_time, fontsize=12)
+ax2.tick_params(axis='y', labelcolor=color_time)
+
+
+time_line, = ax2.plot(gnn_depths, training_time_s, linestyle='--', marker='o', color=color_time, label='Training Time (s)', linewidth=2)
+
+
+
+plt.title('Effect of GNN Depth on Performance and Time', fontsize=16)
+
+
+lines = [micro_line, macro_line, time_line]
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc='lower right', frameon=True)
+
+
+plot_path = os.path.join(OUTPUT_DIR, 'C_GNN_Depth_Analysis.png')
+plt.savefig(plot_path)
+plt.close()
+
+print(f"\n GNN Depth Analysis Plot saved to {plot_path}")
+print("Remember to verify the data points in the code above match your collected log data!")
