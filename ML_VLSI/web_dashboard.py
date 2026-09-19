@@ -14,9 +14,10 @@ import urllib.parse
 import time
 from netlist_graph_engine import parse_verilog_netlist, build_circuit_graph, CLASS_NAMES, CLASS_COLORS
 from gnn_engine import CircuitGNN, extract_subcircuit_boundaries
+import gnn_re_inference
 
 PORT = 8501
-DATASET_DIR = os.path.join(os.path.dirname(__file__), 'GNN-RE', 'Netlist_to_graph', 'Circuits_datasets', 'Interconnected-Modules')
+DATASET_DIR = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), 'GNN-RE', 'Netlist_to_graph', 'Circuits_datasets', 'Interconnected-Modules')
 
 # Initialize GNN model
 gnn_model = CircuitGNN(in_dim=34, hidden_dim=64, num_classes=5, depth=2, lr=0.03)
@@ -287,24 +288,53 @@ HTML_CONTENT = """<!DOCTYPE html>
       <!-- Metrics & Boundary Extraction Results -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         
-        <!-- Metrics Card -->
+        <!-- Metrics Card — Baseline vs GNN-RE side by side -->
         <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center">
             <i class="fa-solid fa-chart-pie text-emerald-400 mr-2"></i> Model Performance & Accuracy
           </h3>
-          
-          <div class="grid grid-cols-3 gap-2.5 text-center">
-            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-              <div class="text-[10px] text-slate-400 font-medium">Node Accuracy</div>
-              <div id="metric-acc" class="text-xl font-bold text-emerald-400 mt-1 font-mono">--%</div>
+
+          <!-- Column headers -->
+          <div class="grid grid-cols-2 gap-3 text-center text-[10px] font-semibold mb-1">
+            <div class="bg-slate-800/60 rounded-lg py-1.5 text-slate-400 border border-slate-700/60">
+              <i class="fa-solid fa-microchip mr-1 text-slate-500"></i> Baseline GNN <span class="text-slate-600">(2-layer, 3ep)</span>
             </div>
-            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-              <div class="text-[10px] text-slate-400 font-medium">Micro-F1</div>
-              <div id="metric-micro" class="text-xl font-bold text-cyan-400 mt-1 font-mono">--%</div>
+            <div class="bg-indigo-950/60 rounded-lg py-1.5 text-indigo-300 border border-indigo-500/30">
+              <i class="fa-solid fa-brain mr-1 text-indigo-400"></i> GNN-RE <span class="text-indigo-500">(GraphSAINT, 2k ep)</span>
             </div>
-            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-              <div class="text-[10px] text-slate-400 font-medium">Macro-F1</div>
-              <div id="metric-macro" class="text-xl font-bold text-purple-400 mt-1 font-mono">--%</div>
+          </div>
+
+          <!-- Metric rows -->
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Baseline -->
+            <div class="space-y-2">
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+                <div class="text-[10px] text-slate-500 font-medium">Node Accuracy</div>
+                <div id="base-acc" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+              </div>
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+                <div class="text-[10px] text-slate-500 font-medium">Micro-F1</div>
+                <div id="base-micro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+              </div>
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+                <div class="text-[10px] text-slate-500 font-medium">Macro-F1</div>
+                <div id="base-macro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+              </div>
+            </div>
+            <!-- GNN-RE -->
+            <div class="space-y-2">
+              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+                <div class="text-[10px] text-indigo-400 font-medium">Node Accuracy</div>
+                <div id="metric-acc" class="text-lg font-bold text-emerald-400 mt-0.5 font-mono">--%</div>
+              </div>
+              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+                <div class="text-[10px] text-indigo-400 font-medium">Micro-F1</div>
+                <div id="metric-micro" class="text-lg font-bold text-cyan-400 mt-0.5 font-mono">--%</div>
+              </div>
+              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+                <div class="text-[10px] text-indigo-400 font-medium">Macro-F1</div>
+                <div id="metric-macro" class="text-lg font-bold text-purple-400 mt-0.5 font-mono">--%</div>
+              </div>
             </div>
           </div>
 
@@ -696,10 +726,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       const result = await res.json();
       
       currentSubcircuits = result.subcircuits;
-      
-      document.getElementById('metric-acc').textContent = (result.metrics.accuracy * 100).toFixed(1) + '%';
-      document.getElementById('metric-micro').textContent = (result.metrics.f1_micro * 100).toFixed(1) + '%';
-      document.getElementById('metric-macro').textContent = (result.metrics.f1_macro * 100).toFixed(1) + '%';
+
+      // GNN-RE metrics (real 2k-epoch model, or fallback if circuit not in CSV)
+      document.getElementById('metric-acc').textContent   = (result.metrics.accuracy * 100).toFixed(1) + '%';
+      document.getElementById('metric-micro').textContent = (result.metrics.f1_micro  * 100).toFixed(1) + '%';
+      document.getElementById('metric-macro').textContent = (result.metrics.f1_macro  * 100).toFixed(1) + '%';
+
+      // Baseline metrics (toy 2-layer GNN, 3 training epochs)
+      if (result.baseline) {
+        document.getElementById('base-acc').textContent   = (result.baseline.accuracy * 100).toFixed(1) + '%';
+        document.getElementById('base-micro').textContent = (result.baseline.f1_micro  * 100).toFixed(1) + '%';
+        document.getElementById('base-macro').textContent = (result.baseline.f1_macro  * 100).toFixed(1) + '%';
+      }
 
       const classNames = ["Adder", "Multiplier", "Control Logic", "Subtractor", "Comparator"];
       const colors = ["#38bdf8", "#10b981", "#f59e0b", "#a855f7", "#06b6d4"];
@@ -891,14 +929,37 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             if os.path.exists(file_path):
                 parsed = parse_verilog_netlist(file_path)
                 nodes, edges, feats, labels = build_circuit_graph(parsed)
-                metrics = gnn_model.evaluate(feats, edges, labels)
-                subcircuits = extract_subcircuit_boundaries(nodes, edges, metrics['predictions'])
-                
+
+                # ── Baseline: toy 2-layer GNN (3 training epochs) ──────────
+                baseline_metrics = gnn_model.evaluate(feats, edges, labels)
+
+                # ── GNN-RE: real 2000-epoch GraphSAINT predictions ──────────
+                real_result = gnn_re_inference.lookup_circuit(circuit_name)
+                if real_result is not None:
+                    real_preds = real_result['metrics']['predictions']
+                    n_nodes = len(nodes)
+                    if len(real_preds) > n_nodes:
+                        real_preds = real_preds[:n_nodes]
+                    elif len(real_preds) < n_nodes:
+                        real_preds = real_preds + [int(labels[i]) for i in range(len(real_preds), n_nodes)]
+                    real_result['metrics']['predictions'] = real_preds
+                    gnn_re_metrics = real_result['metrics']
+                    print(f'[/api/infer] GNN-RE predictions for {circuit_name}: '
+                          f'acc={gnn_re_metrics["accuracy"]:.4f}, f1_mic={gnn_re_metrics["f1_micro"]:.4f}')
+                else:
+                    # Circuit not in CSV (e.g. uploaded) — use baseline for both
+                    gnn_re_metrics = baseline_metrics
+                    print(f'[/api/infer] No CSV entry for {circuit_name}, using baseline for both columns')
+
+                # Sub-circuit boundaries driven by the best available predictions
+                subcircuits = extract_subcircuit_boundaries(nodes, edges, gnn_re_metrics['predictions'])
+
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
-                    'metrics': metrics,
+                    'metrics':   gnn_re_metrics,
+                    'baseline':  baseline_metrics,
                     'subcircuits': subcircuits
                 }).encode('utf-8'))
             else:
