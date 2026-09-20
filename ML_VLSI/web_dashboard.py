@@ -125,17 +125,6 @@ HTML_CONTENT = """<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Mode Selector & Controls -->
-    <div class="flex items-center space-x-4">
-      <div class="flex bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs">
-        <button id="mode-layman-btn" onclick="setExplanationMode('layman')" class="px-3.5 py-1.5 rounded-lg font-medium bg-indigo-600 text-white shadow-md transition-all flex items-center">
-          <i class="fa-solid fa-user-astronaut mr-1.5 text-xs"></i> Layman Mode
-        </button>
-        <button id="mode-prof-btn" onclick="setExplanationMode('prof')" class="px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center">
-          <i class="fa-solid fa-graduation-cap mr-1.5 text-xs"></i> Professor Mode
-        </button>
-      </div>
-    </div>
   </header>
 
   <!-- Main Grid Layout -->
@@ -184,32 +173,60 @@ HTML_CONTENT = """<!DOCTYPE html>
         </button>
       </div>
 
-      <!-- 2. Dynamic Explanation Card (Layman / Professor) -->
+      <!-- 2. Model Performance & Accuracy Card -->
       <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-white flex items-center tracking-wide">
-            <i class="fa-solid fa-lightbulb text-amber-400 mr-2 text-base"></i> What's Happening Here?
-          </h2>
-          <span id="mode-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Layman Mode</span>
-        </div>
-        
-        <div id="explanation-text" class="text-xs text-slate-300 space-y-2.5 leading-relaxed bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-          <!-- Populated dynamically and rendered by KaTeX -->
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center">
+          <i class="fa-solid fa-chart-pie text-emerald-400 mr-2"></i> Model Performance & Accuracy
+        </h3>
+
+        <!-- Column headers -->
+        <div class="grid grid-cols-2 gap-3 text-center text-[10px] font-semibold mb-1">
+          <div class="bg-slate-800/60 rounded-lg py-1.5 text-slate-400 border border-slate-700/60">
+            <i class="fa-solid fa-microchip mr-1 text-slate-500"></i> Baseline GNN <span class="text-slate-600">(2-layer, 3ep)</span>
+          </div>
+          <div class="bg-indigo-950/60 rounded-lg py-1.5 text-indigo-300 border border-indigo-500/30">
+            <i class="fa-solid fa-brain mr-1 text-indigo-400"></i> GNN-RE <span class="text-indigo-500">(GraphSAINT, 2k ep)</span>
+          </div>
         </div>
 
-        <!-- Case Studies Quick Switch -->
+        <!-- Metric rows -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Baseline -->
+          <div class="space-y-2">
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Node Accuracy</div>
+              <div id="base-acc" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Micro-F1</div>
+              <div id="base-micro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Macro-F1</div>
+              <div id="base-macro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+            </div>
+          </div>
+          <!-- GNN-RE -->
+          <div class="space-y-2">
+            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Node Accuracy</div>
+              <div id="metric-acc" class="text-lg font-bold text-emerald-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Micro-F1</div>
+              <div id="metric-micro" class="text-lg font-bold text-cyan-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Macro-F1</div>
+              <div id="metric-macro" class="text-lg font-bold text-purple-400 mt-0.5 font-mono">--%</div>
+            </div>
+          </div>
+        </div>
+
         <div class="pt-2 border-t border-slate-800/80">
-          <div class="text-[11px] font-semibold text-slate-400 mb-2">Explore Real-World Cases:</div>
-          <div class="grid grid-cols-3 gap-1.5">
-            <button onclick="loadCaseStudy(1)" class="p-1.5 rounded-lg bg-slate-950/80 hover:bg-indigo-950/50 border border-slate-800 hover:border-indigo-500/50 text-[10px] text-indigo-300 font-medium transition text-center">
-              ALU Partitioning
-            </button>
-            <button onclick="loadCaseStudy(2)" class="p-1.5 rounded-lg bg-slate-950/80 hover:bg-emerald-950/50 border border-slate-800 hover:border-emerald-500/50 text-[10px] text-emerald-300 font-medium transition text-center">
-              FSM vs Datapath
-            </button>
-            <button onclick="loadCaseStudy(3)" class="p-1.5 rounded-lg bg-slate-950/80 hover:bg-rose-950/50 border border-slate-800 hover:border-rose-500/50 text-[10px] text-rose-300 font-medium transition text-center">
-              Trojan Detection
-            </button>
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Gate Distribution by Class:</div>
+          <div id="class-breakdown" class="space-y-1.5 text-[11px] text-slate-300 font-mono">
+            <div class="text-slate-500 italic">Select a circuit or run GNN to see breakdown.</div>
           </div>
         </div>
       </div>
@@ -285,83 +302,20 @@ HTML_CONTENT = """<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- Metrics & Boundary Extraction Results -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-        
-        <!-- Metrics Card — Baseline vs GNN-RE side by side -->
-        <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
+      <!-- Identified Sub-Circuits -->
+      <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
+        <div class="flex items-center justify-between">
           <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center">
-            <i class="fa-solid fa-chart-pie text-emerald-400 mr-2"></i> Model Performance & Accuracy
+            <i class="fa-solid fa-cubes-stacked text-purple-400 mr-2"></i> Identified Functional Sub-Circuits
           </h3>
-
-          <!-- Column headers -->
-          <div class="grid grid-cols-2 gap-3 text-center text-[10px] font-semibold mb-1">
-            <div class="bg-slate-800/60 rounded-lg py-1.5 text-slate-400 border border-slate-700/60">
-              <i class="fa-solid fa-microchip mr-1 text-slate-500"></i> Baseline GNN <span class="text-slate-600">(2-layer, 3ep)</span>
-            </div>
-            <div class="bg-indigo-950/60 rounded-lg py-1.5 text-indigo-300 border border-indigo-500/30">
-              <i class="fa-solid fa-brain mr-1 text-indigo-400"></i> GNN-RE <span class="text-indigo-500">(GraphSAINT, 2k ep)</span>
-            </div>
-          </div>
-
-          <!-- Metric rows -->
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Baseline -->
-            <div class="space-y-2">
-              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-                <div class="text-[10px] text-slate-500 font-medium">Node Accuracy</div>
-                <div id="base-acc" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-              </div>
-              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-                <div class="text-[10px] text-slate-500 font-medium">Micro-F1</div>
-                <div id="base-micro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-              </div>
-              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-                <div class="text-[10px] text-slate-500 font-medium">Macro-F1</div>
-                <div id="base-macro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-              </div>
-            </div>
-            <!-- GNN-RE -->
-            <div class="space-y-2">
-              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
-                <div class="text-[10px] text-indigo-400 font-medium">Node Accuracy</div>
-                <div id="metric-acc" class="text-lg font-bold text-emerald-400 mt-0.5 font-mono">--%</div>
-              </div>
-              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
-                <div class="text-[10px] text-indigo-400 font-medium">Micro-F1</div>
-                <div id="metric-micro" class="text-lg font-bold text-cyan-400 mt-0.5 font-mono">--%</div>
-              </div>
-              <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
-                <div class="text-[10px] text-indigo-400 font-medium">Macro-F1</div>
-                <div id="metric-macro" class="text-lg font-bold text-purple-400 mt-0.5 font-mono">--%</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800/80">
-            <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Gate Distribution by Class:</div>
-            <div id="class-breakdown" class="space-y-1.5 text-[11px] text-slate-300 font-mono">
-              <div class="text-slate-500 italic">Select a circuit or run GNN to see breakdown.</div>
-            </div>
-          </div>
+          <span id="subcircuit-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">0 Modules</span>
         </div>
 
-        <!-- Discovered Subcircuits / Boundaries -->
-        <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center">
-              <i class="fa-solid fa-cubes-stacked text-purple-400 mr-2"></i> Identified Functional Sub-Circuits
-            </h3>
-            <span id="subcircuit-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">0 Modules</span>
-          </div>
-
-          <div id="subcircuits-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
-            <div class="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl text-slate-500 italic text-center">
-              Run GNN Reverse Engineering to partition and visualize identified sub-circuits.
-            </div>
+        <div id="subcircuits-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
+          <div class="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl text-slate-500 italic text-center">
+            Run GNN Reverse Engineering to partition and visualize identified sub-circuits.
           </div>
         </div>
-
       </div>
 
     </div>
