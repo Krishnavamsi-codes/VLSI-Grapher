@@ -47,8 +47,10 @@ def test_server_config():
 
 
 @pytest.mark.parametrize('path', [
-    '/.env', '/web_dashboard.py', '/GNN-RE/GraphSAINT/predictions_all_nodes.csv',
-    '/static/../.env', '/static/%2e%2e/.env', '/static/..%2f.env', '/static/..%5c.env',
+    '/.env', '/%2eenv', '/%2Eenv', '/./.env', '//.env', '/static/.env', '/static/%2eenv',
+    '/web_dashboard.py', '/GNN-RE/GraphSAINT/predictions_all_nodes.csv',
+    '/static/../.env', '/static/%2e%2e/.env', '/static/%2E%2E/.env', '/static/%2e%2e%2f.env',
+    '/static/..%2f.env', '/static/..%5c.env', '/static/%252e%252e/.env', '/static/....//.env',
     '/static/../web_dashboard.py', '/static/', '/static/nope.css', '/static/dashboard.py',
     '/static/%00.css', '/static/C:%5cWindows%5cwin.ini',
 ])

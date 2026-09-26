@@ -55,11 +55,20 @@ def test_fault_detected_with_top_ranked_repair(fault, base):
 
 @pytest.mark.parametrize('base', BASES, ids=lambda b: b[:26])
 def test_second_driver_offers_both_candidate_repairs(base):
-    """Which of two drivers is the intruder is structurally ambiguous: both are offered at 0.5."""
+    """Which driver is the intruder is not structurally decidable: every driver is offered
+    with equal confidence, labelled ambiguous, in gate-id order (no implied ranking)."""
     res, out = _run(os.path.join(DATASET_DIR, base), 'second_driver')
     _check_detection(res, out, require_top=False)
     floating = [f for f in out['findings'] if f['check'] == 'floating_net']
-    assert floating and all(e['confidence'] <= 0.5 for f in floating for e in f['suggested_edges'])
+    assert floating
+    for f in floating:
+        edges = f['suggested_edges']
+        assert edges and all(e.get('ambiguous') for e in edges)
+        assert len({e['confidence'] for e in edges}) == 1 and edges[0]['confidence'] == 0.5
+        assert all(e['reason'].startswith('ambiguous: one of these is the extra driver') for e in edges)
+        for to_gate in {e['to_gate'] for e in edges}:
+            froms = [e['from_gate'] for e in edges if e['to_gate'] == to_gate]
+            assert froms == sorted(froms) and len(froms) == 2
 
 
 def test_cut_carry_also_reports_structural_carry_break():

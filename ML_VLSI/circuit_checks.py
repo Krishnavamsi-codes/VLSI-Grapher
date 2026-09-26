@@ -701,14 +701,22 @@ def _match_suggestions(ctx):
         best_s, best_j = cands[0]
         margin = best_s - cands[1][0] if len(cands) > 1 else 99
         conf = 0.9 if margin >= 2 else 0.6 if margin >= 0.5 else 0.4
-        chosen = [(best_s, best_j, conf)]
-        # multi-driver repairs are ambiguous: offer the runner-up driver too
-        if ctx.sources[best_j]['finding']['check'] == 'multi_driver' and len(cands) > 1 \
-                and ctx.sources[cands[1][1]]['finding'] is ctx.sources[best_j]['finding']:
-            chosen = [(best_s, best_j, 0.5), (cands[1][0], cands[1][1], 0.5)]
-        for _, j, c in chosen:
+        chosen = [(best_j, conf, False)]
+        src_finding = ctx.sources[best_j]['finding']
+        if src_finding['check'] == 'multi_driver':
+            # Which driver is the extra one is not decidable from structure (a bit-slice
+            # heuristic was right only 86% of the time when it decided at all), so every
+            # driver of the net is offered with equal confidence, in gate-id order.
+            group = sorted((j for j, s in enumerate(ctx.sources) if s['finding'] is src_finding),
+                           key=lambda j: ctx.sources[j]['gate_id'])
+            chosen = [(j, round(1.0 / len(group), 2), True) for j in group]
+        for j, c, ambiguous in chosen:
             used.add(j)
             edge = _describe_edge(ctx, ctx.sources[j], ctx.sinks[i], c)
+            if ambiguous:
+                edge['ambiguous'] = True
+                edge['reason'] = (f'ambiguous: one of these is the extra driver of {ctx.sources[j]["net"]}. '
+                                  + edge['reason'])
             for f in (ctx.sinks[i]['finding'], ctx.sources[j]['finding']):
                 if edge not in f['suggested_edges']:
                     f['suggested_edges'].append(edge)
