@@ -6,18 +6,30 @@ live GNN inference, and Layman/Professor explanations.
 """
 
 import http.server
-import socketserver
 import json
 import os
-import glob
+import traceback
 import urllib.parse
 import time
-from netlist_graph_engine import parse_verilog_netlist, build_circuit_graph, CLASS_NAMES, CLASS_COLORS
+from netlist_graph_engine import (parse_verilog_netlist, parse_verilog_text, build_circuit_graph,
+                                  NetlistParseError, CLASS_NAMES, CLASS_COLORS)
 from gnn_engine import CircuitGNN, extract_subcircuit_boundaries
 import gnn_re_inference
+import circuit_store
+from circuit_store import CircuitRefError, DATASET_DIR, resolve_circuit
 
+HOST = '127.0.0.1'
 PORT = 8501
-DATASET_DIR = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), 'GNN-RE', 'Netlist_to_graph', 'Circuits_datasets', 'Interconnected-Modules')
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+STATIC_TYPES = {
+    '.js': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
+    '.woff2': 'font/woff2',
+}
+# Upload text arrives JSON-escaped, so allow headroom over the raw 10 MB limit
+MAX_BODY_BYTES = 2 * circuit_store.MAX_UPLOAD_BYTES + 64 * 1024
 
 # Initialize GNN model
 gnn_model = CircuitGNN(in_dim=34, hidden_dim=64, num_classes=5, depth=2, lr=0.03)
@@ -55,59 +67,7 @@ HTML_CONTENT = """<!DOCTYPE html>
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- KaTeX for math rendering -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-    
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #030712;
-    }
-    
-    code, pre {
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    #network-container, #schematic-canvas-container {
-      height: 520px;
-      background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
-      border-radius: 0.875rem;
-    }
-
-    .glass-card {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    
-    .glass-card:hover {
-      border-color: rgba(99, 102, 241, 0.3);
-    }
-
-    .glow-indigo {
-      box-shadow: 0 0 30px -5px rgba(99, 102, 241, 0.35);
-    }
-
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #090d16;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body class="text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
   <!-- Top Navigation Bar -->
@@ -223,6 +183,8 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
         </div>
 
+        <div id="gnnre-note" class="hidden text-[10px] text-amber-300/90 leading-snug"></div>
+
         <div class="pt-2 border-t border-slate-800/80">
           <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Gate Distribution by Class:</div>
           <div id="class-breakdown" class="space-y-1.5 text-[11px] text-slate-300 font-mono">
@@ -322,8 +284,14 @@ HTML_CONTENT = """<!DOCTYPE html>
 
   </main>
 
+  <!-- Error toast -->
+  <div id="toast" class="hidden fixed bottom-5 right-5 z-[60] max-w-sm bg-rose-950/95 border border-rose-500/40 text-rose-100 text-xs rounded-xl shadow-2xl px-4 py-3 flex items-start space-x-2">
+    <i class="fa-solid fa-triangle-exclamation text-rose-400 mt-0.5"></i>
+    <span id="toast-text"></span>
+  </div>
+
   <script>
-    let currentMode = 'layman';
+    let currentSource = null;          // {circuit_name} or {upload_id} of the loaded circuit
     let currentCircuitData = null;
     let currentSubcircuits = [];
     let network = null;
@@ -337,44 +305,73 @@ HTML_CONTENT = """<!DOCTYPE html>
       4: { name: 'Comparator', fill: 'rgba(6, 182, 212, 0.15)', border: '#06b6d4', badge: '#0891b2' }
     };
 
-    const caseExplanations = {
-      1: {
-        layman: "<strong>Case 1 (Multi-Function ALU):</strong> In a flattened circuit, adders, multipliers, and subtractors are mixed into one giant netlist. GNN-RE analyzes wire paths to identify which gates belong to the <em>Adder carry-chains</em>, <em>Multiplier matrices</em>, and <em>Subtractor units</em>, drawing colored boundary boxes around each sub-circuit!",
-        prof: "<strong>Case 1 (ALU Multi-module Partitioning):</strong> A multi-function ALU synthesized with Synopsys DC on GF 65nm flattens module boundaries. The GNN uses $L=2$ graph convolutions to aggregate fan-in/fan-out trajectories, partitioning $\\text{XOR}/\\text{ADDF}$ carry trees (Adders) from partial product $\\text{AND}$ matrices (Multipliers) with $\\mathbf{\\text{Micro-F1}} \\ge 97\\%$."
-      },
-      2: {
-        layman: "<strong>Case 2 (CPU Control vs Datapath):</strong> The datapath acts like wide multi-lane highways (handling numbers), while control logic acts like traffic lights directing who goes next. GNN-RE spots the traffic lights (multiplexers) instantly and groups them into the Control Block!",
-        prof: "<strong>Case 2 (FSM Control Logic Recovery):</strong> Control logic exhibits dense cyclic feedback loops and high out-degree MUX select lines ($S_0$). Its distinct PageRank and centrality invariants allow the GNN to isolate state machines without requiring dynamic simulation."
-      },
-      3: {
-        layman: "<strong>Case 3 (Hardware Trojan / Backdoor):</strong> A sneaky hacker added 4 hidden gates inside a chip to leak secret passwords. Normal testing misses it because it is dormant. GNN-RE spots the weird wiring pattern and sounds the alarm!",
-        prof: "<strong>Case 3 (Hardware Trojan & IP Piracy):</strong> Rare-event hardware Trojan triggers introduce localized graph topological anomalies. Latent node representations $\\mathbf{h}_v \\in \\mathbb{R}^{64}$ deviate from surrounding certified functional clusters, flagging malicious insertions."
-      }
-    };
+    function showError(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = message;
+      toast.classList.remove('hidden');
+      clearTimeout(showError._timer);
+      showError._timer = setTimeout(() => toast.classList.add('hidden'), 7000);
+    }
 
-    function renderMath() {
-      if (window.renderMathInElement) {
-        renderMathInElement(document.getElementById('explanation-text'), {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false}
-          ],
-          throwOnError: false
-        });
+    // fetch wrapper: throws Error(message) on network failure, non-JSON or non-2xx responses
+    async function apiFetch(url, options) {
+      let res;
+      try {
+        res = await fetch(url, options);
+      } catch (e) {
+        throw new Error('Network error: could not reach the server.');
       }
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* non-JSON body */ }
+      if (!res.ok) {
+        throw new Error((data && data.message) || `Request failed (HTTP ${res.status}).`);
+      }
+      if (data === null) throw new Error('Unexpected response from the server.');
+      return data;
+    }
+
+    function postJson(url, body) {
+      return apiFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+
+    function setCircuitData(data) {
+      currentCircuitData = data;
+      currentSubcircuits = [];
+      const badge = document.getElementById('circuit-badge');
+      badge.textContent = { upload: 'Uploaded netlist', demo: 'Demo fault (injected)' }[data.source] || 'Synthesized 65nm';
+      renderCircuitSchematic();
+      renderGraph(currentCircuitData);
     }
 
     async function init() {
-      const res = await fetch('/api/circuits');
-      const data = await res.json();
       const select = document.getElementById('circuit-select');
+      let data;
+      try {
+        data = await apiFetch('/api/circuits');
+      } catch (e) {
+        select.innerHTML = '<option value="">Could not load circuits</option>';
+        showError(e.message);
+        return;
+      }
       select.innerHTML = '';
-      data.circuits.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c.replace('.v', '');
-        select.appendChild(opt);
-      });
+      const addGroup = (label, names) => {
+        if (!names || names.length === 0) return;
+        const group = document.createElement('optgroup');
+        group.label = label;
+        names.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c.replace('.v', '');
+          group.appendChild(opt);
+        });
+        select.appendChild(group);
+      };
+      addGroup('Benchmarks', data.circuits);
+      addGroup('Demo faults (injected)', data.demo_circuits);
       if (data.circuits.length > 0) {
         select.value = data.circuits[0];
         loadSelectedCircuit();
@@ -415,13 +412,14 @@ HTML_CONTENT = """<!DOCTYPE html>
     async function loadSelectedCircuit() {
       const name = document.getElementById('circuit-select').value;
       if (!name) return;
-      const res = await fetch('/api/load_circuit?name=' + encodeURIComponent(name));
-      currentCircuitData = await res.json();
-      currentSubcircuits = [];
-      renderCircuitSchematic();
-      renderGraph(currentCircuitData);
-      updateExplanation();
-      
+      try {
+        const data = await apiFetch('/api/load_circuit?name=' + encodeURIComponent(name));
+        currentSource = { circuit_name: name };
+        setCircuitData(data);
+      } catch (e) {
+        showError(e.message);
+        return;
+      }
       // Auto-run inference for instant interactive view
       runInference(true);
     }
@@ -429,17 +427,17 @@ HTML_CONTENT = """<!DOCTYPE html>
     async function handleFileUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      const text = await file.text();
-      const res = await fetch('/api/upload_circuit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, content: text })
-      });
-      currentCircuitData = await res.json();
-      currentSubcircuits = [];
-      renderCircuitSchematic();
-      renderGraph(currentCircuitData);
-      updateExplanation();
+      try {
+        const text = await file.text();
+        const data = await postJson('/api/upload_circuit', { filename: file.name, content: text });
+        currentSource = { upload_id: data.upload_id };
+        setCircuitData(data);
+      } catch (err) {
+        showError(err.message);
+        return;
+      } finally {
+        e.target.value = '';   // allow re-uploading the same file
+      }
       runInference(true);
     }
 
@@ -664,27 +662,33 @@ HTML_CONTENT = """<!DOCTYPE html>
     }
 
     async function runInference(silent = false) {
-      if (!currentCircuitData) return;
+      if (!currentCircuitData || !currentSource) return;
       const btn = document.getElementById('run-btn');
+      const idleLabel = '<i class="fa-solid fa-bolt"></i> <span>Run GNN Reverse Engineering</span>';
       if (!silent) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Identifying Sub-circuits...</span>';
-      
-      const res = await fetch('/api/infer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          circuit_name: document.getElementById('circuit-select').value,
-          custom_nodes: currentCircuitData.nodes,
-          custom_edges: currentCircuitData.edges
-        })
-      });
-      const result = await res.json();
-      
+
+      let result;
+      try {
+        result = await postJson('/api/infer', currentSource);
+      } catch (e) {
+        showError(e.message);
+        btn.innerHTML = idleLabel;
+        return;
+      }
+
       currentSubcircuits = result.subcircuits;
 
-      // GNN-RE metrics (real 2k-epoch model, or fallback if circuit not in CSV)
-      document.getElementById('metric-acc').textContent   = (result.metrics.accuracy * 100).toFixed(1) + '%';
-      document.getElementById('metric-micro').textContent = (result.metrics.f1_micro  * 100).toFixed(1) + '%';
-      document.getElementById('metric-macro').textContent = (result.metrics.f1_macro  * 100).toFixed(1) + '%';
+      // GNN-RE metrics (real 2k-epoch GraphSAINT predictions), or N/A for uploads
+      const note = document.getElementById('gnnre-note');
+      if (result.metrics) {
+        document.getElementById('metric-acc').textContent   = (result.metrics.accuracy * 100).toFixed(1) + '%';
+        document.getElementById('metric-micro').textContent = (result.metrics.f1_micro  * 100).toFixed(1) + '%';
+        document.getElementById('metric-macro').textContent = (result.metrics.f1_macro  * 100).toFixed(1) + '%';
+      } else {
+        ['metric-acc', 'metric-micro', 'metric-macro'].forEach(id => document.getElementById(id).textContent = 'N/A');
+      }
+      note.textContent = result.gnn_re_message || '';
+      note.classList.toggle('hidden', !result.gnn_re_message);
 
       // Baseline metrics (toy 2-layer GNN, 3 training epochs)
       if (result.baseline) {
@@ -696,13 +700,13 @@ HTML_CONTENT = """<!DOCTYPE html>
       const classNames = ["Adder", "Multiplier", "Control Logic", "Subtractor", "Comparator"];
       const colors = ["#38bdf8", "#10b981", "#f59e0b", "#a855f7", "#06b6d4"];
       let breakdownHtml = '';
-      
+
       const counts = [0, 0, 0, 0, 0];
-      result.metrics.predictions.forEach(p => counts[p]++);
-      
+      result.predictions.forEach(p => counts[p]++);
+
       classNames.forEach((name, idx) => {
         if (counts[idx] > 0) {
-          const pct = ((counts[idx] / result.metrics.predictions.length) * 100).toFixed(0);
+          const pct = ((counts[idx] / result.predictions.length) * 100).toFixed(0);
           breakdownHtml += `
             <div class="flex items-center justify-between py-0.5">
               <span class="flex items-center"><span class="w-2 h-2 rounded-full mr-2" style="background:${colors[idx]}"></span>${name}</span>
@@ -756,55 +760,8 @@ HTML_CONTENT = """<!DOCTYPE html>
       }
     }
 
-    function setExplanationMode(mode) {
-      currentMode = mode;
-      document.getElementById('mode-layman-btn').className = mode === 'layman' ? 
-        'px-3.5 py-1.5 rounded-lg font-medium bg-indigo-600 text-white shadow-md transition-all flex items-center' : 
-        'px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center';
-      document.getElementById('mode-prof-btn').className = mode === 'prof' ? 
-        'px-3.5 py-1.5 rounded-lg font-medium bg-indigo-600 text-white shadow-md transition-all flex items-center' : 
-        'px-3.5 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center';
-      document.getElementById('mode-badge').textContent = mode === 'layman' ? 'Layman Mode' : 'Professor Mode';
-      updateExplanation();
-    }
-
-    function updateExplanation() {
-      const expDiv = document.getElementById('explanation-text');
-      if (currentMode === 'layman') {
-        expDiv.innerHTML = `
-          <p><strong>💡 Layman Explanation:</strong> Think of this circuit like an unlabelled computer motherboard found in an archaeological dig. Every gate (box) performs a simple boolean task (AND, OR, XOR), but without blueprints, nobody knows what the whole chip does.</p>
-          <p class="mt-2">GNN-RE passes messages through the wires to analyze neighborhood patterns. Gates connected in a chain become <strong>Adders (Blue)</strong>, dense matrix grids become <strong>Multipliers (Green)</strong>, and selector switches become <strong>Control Logic (Amber)</strong>. The colored shaded regions on the schematic show the exact identified sub-circuits!</p>
-        `;
-      } else {
-        expDiv.innerHTML = `
-          <p><strong>🎓 Academic Formulation:</strong> The gate-level netlist is modeled as a directed attributed graph $G = (V, E, X)$ where $X \\in \\mathbb{R}^{N \\times 34}$ captures gate-level standard cell library semantics and graph degree metrics.</p>
-          <p class="mt-2">The inductive GNN executes $L$-layer neighborhood aggregation: $$\\mathbf{h}_v^{(l)} = \\sigma\\left(\\sum_{u \\in \\mathcal{N}(v)} \\tilde{\\mathbf{A}}_{uv} \\mathbf{W}^{(l)} \\mathbf{h}_u^{(l-1)}\\right)$$ Softmax mapping $\\hat{\\mathbf{Y}} = \\text{softmax}(\\mathbf{H}^{(L)} \\mathbf{W}_o)$ classifies nodes into $\\{0..4\\}$, and connected-component clustering recovers sub-circuit boundaries with high precision.</p>
-        `;
-      }
-      renderMath();
-    }
-
-    function loadCaseStudy(caseNum) {
-      const exp = caseExplanations[caseNum];
-      const text = currentMode === 'layman' ? exp.layman : exp.prof;
-      document.getElementById('explanation-text').innerHTML = `<p>${text}</p>`;
-      renderMath();
-      
-      const select = document.getElementById('circuit-select');
-      if (caseNum === 1) {
-        for (let opt of select.options) {
-          if (opt.value.includes('combine_4_bit') || opt.value.includes('comp_sub')) {
-            select.value = opt.value;
-            loadSelectedCircuit();
-            break;
-          }
-        }
-      }
-    }
-
     window.onload = () => {
       init();
-      setTimeout(renderMath, 500);
       window.addEventListener('resize', () => renderCircuitSchematic());
     };
   </script>
@@ -812,120 +769,191 @@ HTML_CONTENT = """<!DOCTYPE html>
 </html>
 """
 
-class RequestHandler(http.server.SimpleHTTPRequestHandler):
+def _load_parsed(ref):
+    parsed = parse_verilog_netlist(ref.path)
+    if parsed is None:
+        raise NetlistParseError('No "module <name> ( ... );" declaration found.')
+    return parsed
+
+
+class RequestHandler(http.server.BaseHTTPRequestHandler):
+    """Explicit routes only: '/', '/api/*' and whitelisted files under /static/."""
+
+    # ---- response helpers -------------------------------------------------
+    def _send_bytes(self, status, body, content_type):
+        self.send_response(status)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_json(self, status, obj):
+        self._send_bytes(status, json.dumps(obj).encode('utf-8'), 'application/json')
+
+    def _send_error_json(self, status, error_code, message):
+        self._send_json(status, {'error_code': error_code, 'message': message})
+
+    def _read_json(self):
+        try:
+            length = int(self.headers.get('Content-Length') or 0)
+        except ValueError:
+            raise CircuitRefError(400, 'INVALID_REQUEST', 'Invalid Content-Length.')
+        if length > MAX_BODY_BYTES:
+            raise CircuitRefError(413, 'BODY_TOO_LARGE', 'Request body too large.')
+        try:
+            data = json.loads(self.rfile.read(length).decode('utf-8') or '{}')
+        except (ValueError, UnicodeDecodeError):
+            raise CircuitRefError(400, 'INVALID_JSON', 'Request body must be JSON.')
+        if not isinstance(data, dict):
+            raise CircuitRefError(400, 'INVALID_JSON', 'Request body must be a JSON object.')
+        return data
+
+    def _dispatch(self, handler):
+        try:
+            handler()
+        except CircuitRefError as e:
+            self._send_error_json(e.status, e.error_code, e.message)
+        except NetlistParseError as e:
+            self._send_error_json(400, 'INVALID_NETLIST', f'Could not parse netlist: {e}')
+        except Exception:
+            traceback.print_exc()
+            self._send_error_json(500, 'INTERNAL_ERROR', 'Internal server error.')
+
     def do_GET(self):
+        self._dispatch(self._handle_get)
+
+    def do_POST(self):
+        self._dispatch(self._handle_post)
+
+    # ---- GET ----------------------------------------------------------------
+    def _handle_get(self):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         query = urllib.parse.parse_qs(parsed_url.query)
 
         if path == '/' or path == '/index.html':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            self.wfile.write(HTML_CONTENT.encode('utf-8'))
+            self._send_bytes(200, HTML_CONTENT.encode('utf-8'), 'text/html; charset=utf-8')
         elif path == '/api/circuits':
-            files = sorted([os.path.basename(f) for f in glob.glob(os.path.join(DATASET_DIR, '*.v'))])
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'circuits': files}).encode('utf-8'))
+            self._send_json(200, {'circuits': circuit_store.list_benchmarks(),
+                                  'demo_circuits': circuit_store.list_demos()})
         elif path == '/api/load_circuit':
-            circuit_name = query.get('name', [''])[0]
-            file_path = os.path.join(DATASET_DIR, circuit_name)
-            if os.path.exists(file_path):
-                parsed = parse_verilog_netlist(file_path)
-                nodes, edges, feats, labels = build_circuit_graph(parsed)
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({
-                    'module_name': parsed['module_name'],
-                    'nodes': nodes,
-                    'edges': edges
-                }).encode('utf-8'))
-            else:
-                self.send_response(404)
-                self.end_headers()
-        else:
-            super().do_GET()
-
-    def do_POST(self):
-        if self.path == '/api/upload_circuit':
-            content_len = int(self.headers.get('Content-Length', 0))
-            post_body = self.rfile.read(content_len)
-            data = json.loads(post_body.decode('utf-8'))
-            
-            temp_path = os.path.join(DATASET_DIR, 'Uploaded_custom.v')
-            with open(temp_path, 'w', encoding='utf-8') as f:
-                f.write(data.get('content', ''))
-                
-            parsed = parse_verilog_netlist(temp_path)
+            ref = resolve_circuit(circuit_name=query.get('name', [None])[0],
+                                  upload_id=query.get('upload_id', [None])[0])
+            parsed = _load_parsed(ref)
             nodes, edges, feats, labels = build_circuit_graph(parsed)
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            self._send_json(200, {
                 'module_name': parsed['module_name'],
+                'source': ref.kind,
                 'nodes': nodes,
                 'edges': edges
-            }).encode('utf-8'))
+            })
+        elif path.startswith('/static/'):
+            self._serve_static(path[len('/static/'):])
+        else:
+            self._send_error_json(404, 'NOT_FOUND', 'Not found.')
 
-        elif self.path == '/api/infer':
-            content_len = int(self.headers.get('Content-Length', 0))
-            post_body = self.rfile.read(content_len)
-            data = json.loads(post_body.decode('utf-8'))
-            
-            circuit_name = data.get('circuit_name')
-            file_path = os.path.join(DATASET_DIR, circuit_name)
-            if not os.path.exists(file_path):
-                file_path = os.path.join(DATASET_DIR, 'Uploaded_custom.v')
-                
-            if os.path.exists(file_path):
-                parsed = parse_verilog_netlist(file_path)
-                nodes, edges, feats, labels = build_circuit_graph(parsed)
+    def _serve_static(self, rel):
+        rel = urllib.parse.unquote(rel)
+        ext = os.path.splitext(rel)[1].lower()
+        if not rel or '\x00' in rel or ext not in STATIC_TYPES or not circuit_store.is_inside(STATIC_DIR, rel):
+            self._send_error_json(404, 'NOT_FOUND', 'Not found.')
+            return
+        full = os.path.realpath(os.path.join(STATIC_DIR, rel))
+        if not os.path.isfile(full):
+            self._send_error_json(404, 'NOT_FOUND', 'Not found.')
+            return
+        with open(full, 'rb') as f:
+            self._send_bytes(200, f.read(), STATIC_TYPES[ext])
 
-                # ── Baseline: toy 2-layer GNN (3 training epochs) ──────────
-                baseline_metrics = gnn_model.evaluate(feats, edges, labels)
+    # ---- POST ---------------------------------------------------------------
+    def _handle_post(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path == '/api/upload_circuit':
+            data = self._read_json()
+            content = data.get('content')
+            circuit_store.check_upload_size(content)
+            parsed = parse_verilog_text(content)
+            if parsed is None:
+                raise NetlistParseError('No "module <name> ( ... );" declaration found.')
+            if not parsed['gates']:
+                raise NetlistParseError('No gate instances found.')
+            upload_id = circuit_store.save_upload(content)
+            nodes, edges, feats, labels = build_circuit_graph(parsed)
+            self._send_json(200, {
+                'upload_id': upload_id,
+                'module_name': parsed['module_name'],
+                'source': 'upload',
+                'nodes': nodes,
+                'edges': edges
+            })
 
-                # ── GNN-RE: real 2000-epoch GraphSAINT predictions ──────────
-                real_result = gnn_re_inference.lookup_circuit(circuit_name)
-                if real_result is not None:
-                    real_preds = real_result['metrics']['predictions']
-                    n_nodes = len(nodes)
-                    if len(real_preds) > n_nodes:
-                        real_preds = real_preds[:n_nodes]
-                    elif len(real_preds) < n_nodes:
-                        real_preds = real_preds + [int(labels[i]) for i in range(len(real_preds), n_nodes)]
-                    real_result['metrics']['predictions'] = real_preds
-                    gnn_re_metrics = real_result['metrics']
-                    print(f'[/api/infer] GNN-RE predictions for {circuit_name}: '
-                          f'acc={gnn_re_metrics["accuracy"]:.4f}, f1_mic={gnn_re_metrics["f1_micro"]:.4f}')
-                else:
-                    # Circuit not in CSV (e.g. uploaded) — use baseline for both
-                    gnn_re_metrics = baseline_metrics
-                    print(f'[/api/infer] No CSV entry for {circuit_name}, using baseline for both columns')
+        elif path == '/api/infer':
+            data = self._read_json()
+            ref = resolve_circuit(circuit_name=data.get('circuit_name'), upload_id=data.get('upload_id'))
+            parsed = _load_parsed(ref)
+            nodes, edges, feats, labels = build_circuit_graph(parsed)
+            if not nodes:
+                raise NetlistParseError('No gate instances found.')
 
-                # Sub-circuit boundaries driven by the best available predictions
-                subcircuits = extract_subcircuit_boundaries(nodes, edges, gnn_re_metrics['predictions'])
+            # ── Baseline: toy 2-layer GNN (3 training epochs) ──────────
+            baseline_metrics = gnn_model.evaluate(feats, edges, labels)
 
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({
-                    'metrics':   gnn_re_metrics,
-                    'baseline':  baseline_metrics,
-                    'subcircuits': subcircuits
-                }).encode('utf-8'))
+            # ── GNN-RE: real 2000-epoch GraphSAINT predictions ──────────
+            real_result = gnn_re_inference.lookup_circuit(ref.csv_key) if ref.csv_key else None
+            gnn_re_message = None
+            if real_result is not None:
+                real_preds = real_result['metrics']['predictions']
+                n_nodes = len(nodes)
+                if len(real_preds) > n_nodes:
+                    real_preds = real_preds[:n_nodes]
+                elif len(real_preds) < n_nodes:
+                    real_preds = real_preds + [int(labels[i]) for i in range(len(real_preds), n_nodes)]
+                real_result['metrics']['predictions'] = real_preds
+                gnn_re_metrics = real_result['metrics']
+                predictions = real_preds
+                prediction_source = 'graphsaint'
+                if ref.kind == 'demo':
+                    gnn_re_message = (f'GraphSAINT predictions of the unfaulted base circuit {ref.csv_key} '
+                                      f'(the injected fault keeps gate order).')
+                print(f'[/api/infer] GNN-RE predictions for {ref.display_name}: '
+                      f'acc={gnn_re_metrics["accuracy"]:.4f}, f1_mic={gnn_re_metrics["f1_micro"]:.4f}')
             else:
-                self.send_response(404)
-                self.end_headers()
+                # No GraphSAINT predictions (uploads): report N/A, never pass the baseline off as GNN-RE
+                gnn_re_metrics = None
+                predictions = baseline_metrics['predictions']
+                prediction_source = 'baseline'
+                gnn_re_message = 'N/A: no GraphSAINT prediction for uploads. Sub-circuits use the baseline GNN.'
+                print(f'[/api/infer] No GraphSAINT predictions for {ref.display_name}; baseline only')
+
+            # Sub-circuit boundaries driven by the best available predictions
+            subcircuits = extract_subcircuit_boundaries(nodes, edges, predictions)
+
+            self._send_json(200, {
+                'metrics':   gnn_re_metrics,
+                'baseline':  baseline_metrics,
+                'subcircuits': subcircuits,
+                'predictions': predictions,
+                'prediction_source': prediction_source,
+                'gnn_re_available': gnn_re_metrics is not None,
+                'gnn_re_message': gnn_re_message
+            })
+        else:
+            self._send_error_json(404, 'NOT_FOUND', 'Not found.')
+
+
+def make_server(host=HOST, port=PORT):
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
+    server = http.server.ThreadingHTTPServer((host, port), RequestHandler)
+    server.daemon_threads = True
+    return server
+
 
 if __name__ == '__main__':
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), RequestHandler) as httpd:
+    with make_server() as httpd:
         print("\n" + "="*60)
         print("  [+] GNN-RE Interactive Studio is RUNNING!")
-        print(f"  [+] Open in your browser: http://localhost:{PORT}")
+        print(f"  [+] Open in your browser: http://{HOST}:{PORT}")
         print("="*60 + "\n")
         try:
             httpd.serve_forever()

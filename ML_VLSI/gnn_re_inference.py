@@ -23,7 +23,7 @@ Public API
 import os
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -119,8 +119,8 @@ def lookup_circuit(circuit_name):
     acc    = float(accuracy_score(y_true, y_pred))
     f1_mic = float(f1_score(y_true, y_pred, average="micro",     zero_division=0))
     f1_mac = float(f1_score(y_true, y_pred, average="macro",     zero_division=0))
-    prec   = float(f1_score(y_true, y_pred, average="macro",     zero_division=0))
-    rec    = float(f1_score(y_true, y_pred, average="weighted",  zero_division=0))
+    prec   = float(precision_score(y_true, y_pred, average="macro", zero_division=0))
+    rec    = float(recall_score(y_true, y_pred, average="macro", zero_division=0))
 
     conf = confusion_matrix(y_true, y_pred, labels=list(range(NUM_CLASSES)))
 

@@ -1,0 +1,16 @@
+# Runtime (web_dashboard.py, netlist/graph engine, checks). Python >= 3.8.
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.6
+pandas>=2.2
+
+# Tests
+pytest>=7.4
+
+# Notebook only (GNN_RE_Interactive_Pipeline.ipynb), not needed by the app:
+# networkx>=3.3
+# matplotlib>=3.8
+
+# Assistant (Phase B, not used yet):
+# openai
+# python-dotenv

@@ -1,0 +1,40 @@
+{
+ "Demo_cut_carry__Validate_add_mul_8_bit_Syn_65nm.v": {
+  "base": "Validate_add_mul_8_bit_Syn_65nm.v",
+  "fault": "cut_carry",
+  "seed": 0,
+  "description": "Cut the carry link adder_1/intadd_0/U6.CO -> adder_1/intadd_0/U5.CI (net \\adder_1/intadd_0/n5).",
+  "expected_check": "missing_pin",
+  "expected_edge": {
+   "from_gate": 24,
+   "from_pin": "CO",
+   "to_gate": 23,
+   "to_pin": "CI"
+  }
+ },
+ "Demo_float_net__Train_add_mul_comp_sub_4_bit_Syn_65nm.v": {
+  "base": "Train_add_mul_comp_sub_4_bit_Syn_65nm.v",
+  "fault": "float_net",
+  "seed": 0,
+  "description": "Reconnected pin CI of adder_1/U7 (ADDF_X1M_A9TH) from \\adder_1/n4 to a new undriven net n_open_60; adder_1/U6.CO now drives nothing.",
+  "expected_check": "floating_net",
+  "expected_edge": {
+   "from_gate": 61,
+   "from_pin": "CO",
+   "to_gate": 60,
+   "to_pin": "CI"
+  }
+ },
+ "Demo_miswire_bits__Test_add_mul_16_bit_Syn_65nm.v": {
+  "base": "Test_add_mul_16_bit_Syn_65nm.v",
+  "fault": "miswire_bits",
+  "seed": 0,
+  "description": "Swapped operand bits b[1] and b[0]: adder_1/U68.A now reads b[0] and adder_1/U36.B now reads b[1]. The netlist stays electrically valid.",
+  "expected_check": "bit_slice_anomaly",
+  "expected_edge": {
+   "from_net": "b[1]",
+   "to_gate": 45,
+   "to_pin": "A"
+  }
+ }
+}
