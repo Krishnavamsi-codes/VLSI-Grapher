@@ -1,0 +1,11 @@
+{
+ "model": "gpt-6-sol",
+ "probe_ok": false,
+ "probe_seconds": 2.2,
+ "status": {
+  "available": false,
+  "model": "gpt-6-sol",
+  "reason": "The OpenAI account has no credits remaining (insufficient_quota); add credits in the OpenAI billing settings"
+ },
+ "skipped": "Probe failed, so no live report was generated."
+}

@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 *.pyo
+uploads/
+.pytest_cache/
+.venv/
+verification/*.log
