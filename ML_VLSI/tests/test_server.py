@@ -12,7 +12,8 @@ import circuit_store
 @pytest.fixture(scope='module')
 def server():
     import web_dashboard
-    srv = web_dashboard.make_server('127.0.0.1', 0)
+    from fake_llm import FakeLLM
+    srv = web_dashboard.make_server('127.0.0.1', 0, llm=FakeLLM(available=False), probe=False)
     thread = threading.Thread(target=srv.serve_forever, daemon=True)
     thread.start()
     yield srv

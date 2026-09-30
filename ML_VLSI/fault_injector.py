@@ -133,7 +133,7 @@ def drop_pin(text, model, seed=0):
 
 def float_net(text, model, seed=0):
     d, dp, net, r, rp = _pick(_single_reader_links(model), seed)
-    new = f'n_open_{r}'
+    new = f'n{100000 + r}'   # neutral name: must not hint at the fault
     return {
         'fault': 'float_net', 'text': _edit_pin(text, r, rp, new),
         'gate_id': r, 'pin': rp, 'net': new, 'expected_check': 'floating_net',
@@ -233,7 +233,7 @@ def disconnect_po(text, model, seed=0):
                 and not any('gate_id' in r for r in e['readers']):
             sites.append((po, e['drivers'][0]['gate_id'], e['drivers'][0]['pin']))
     po, g, p = _pick(sorted(sites), seed)
-    new = f'n_disc_{g}'
+    new = f'n{200000 + g}'   # neutral name
     return {
         'fault': 'disconnect_po', 'text': _edit_pin(text, g, p, new),
         'gate_id': g, 'pin': p, 'net': po, 'expected_check': 'undriven_po',

@@ -17,6 +17,10 @@ from gnn_engine import CircuitGNN, extract_subcircuit_boundaries
 import gnn_re_inference
 import circuit_store
 from circuit_store import CircuitRefError, DATASET_DIR, resolve_circuit
+import threading
+from analysis_service import AnalysisService
+from assistant import Assistant, MAX_MESSAGE_CHARS
+from llm_client import LLMClient, LLMError
 
 HOST = '127.0.0.1'
 PORT = 8501
@@ -68,6 +72,7 @@ HTML_CONTENT = """<!DOCTYPE html>
   <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="/static/assistant.css">
 </head>
 <body class="text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
   <!-- Top Navigation Bar -->
@@ -84,7 +89,9 @@ HTML_CONTENT = """<!DOCTYPE html>
         <p class="text-[11px] text-slate-400">Netlist-to-Graph & Sub-Circuit Boundary Recognition Engine</p>
       </div>
     </div>
-
+    <button id="assistant-toggle" onclick="Assistant.toggle()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-xs font-semibold hover:bg-indigo-600/40 transition">
+      <span id="assistant-dot" class="status-dot off"></span><i class="fa-solid fa-robot"></i> Assistant
+    </button>
   </header>
 
   <!-- Main Grid Layout -->
@@ -230,7 +237,7 @@ HTML_CONTENT = """<!DOCTYPE html>
               <strong>Gate-Level Schematic Diagram:</strong> Shaded regions indicate <em>Identified Functional Sub-circuits</em>
             </span>
             <div class="flex items-center space-x-2">
-              <span class="text-[10px] text-slate-500 font-mono">Zoom/Pan enabled</span>
+              <span class="text-[10px] text-slate-500 font-mono">Wheel: zoom · Drag: pan · Click: select</span>
               <button onclick="renderCircuitSchematic(true)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-cyan-300 border border-slate-700">
                 <i class="fa-solid fa-arrows-rotate mr-1"></i> Reset View
               </button>
@@ -238,6 +245,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           </div>
           <div id="schematic-canvas-container" class="relative overflow-hidden border border-slate-800/80 shadow-inner flex items-center justify-center">
             <canvas id="schematic-canvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+            <canvas id="schematic-overlay"></canvas>
           </div>
         </div>
 
@@ -249,6 +257,20 @@ HTML_CONTENT = """<!DOCTYPE html>
           <div id="network-container" class="border border-slate-800/80 shadow-inner"></div>
         </div>
 
+        <!-- Issue overlays: toggle + legend -->
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+          <label class="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer"><input id="show-issues" type="checkbox" checked onchange="Overlays.setShow(this.checked)"> Show issues</label>
+          <div class="overlay-legend">
+            <span class="lg"><span class="lg-solid"></span>existing wire</span>
+            <span class="lg"><span class="lg-ghost"></span>suggested missing (not applied)</span>
+            <span class="lg"><span class="lg-halo" style="border-color:#ef4444"></span>error</span>
+            <span class="lg"><span class="lg-halo" style="border-color:#f59e0b"></span>warning / structural</span>
+            <span class="lg"><span class="lg-halo" style="border-color:#fb923c;border-style:dotted"></span>model-based suspicion</span>
+            <span class="lg"><span class="lg-dot" style="background:#ef4444"></span>floating / missing input</span>
+            <span class="lg"><span class="lg-dot" style="background:#f59e0b"></span>dangling output</span>
+            <span class="lg"><span class="lg-stub">PI</span> primary-input stub</span>
+          </div>
+        </div>
         <!-- Node / Gate Inspector -->
         <div id="node-inspector" class="p-3 bg-slate-950/90 border border-slate-800/80 rounded-xl text-xs text-slate-300 hidden">
           <div class="flex items-center justify-between">
@@ -296,6 +318,9 @@ HTML_CONTENT = """<!DOCTYPE html>
     let currentSubcircuits = [];
     let network = null;
     let activeVisualView = 'schematic'; // 'schematic' or 'graph'
+    let graphNodesDS = null, graphEdgesDS = null;       // vis DataSets (overlays.js updates them)
+    let schematicView = { scale: 1, tx: 0, ty: 0 };     // canvas zoom / pan
+    let schematicLayout = null;                         // cached gate positions
 
     const classColors = {
       0: { name: 'Adder', fill: 'rgba(56, 189, 248, 0.15)', border: '#38bdf8', badge: '#0284c7' },
@@ -341,10 +366,15 @@ HTML_CONTENT = """<!DOCTYPE html>
     function setCircuitData(data) {
       currentCircuitData = data;
       currentSubcircuits = [];
+      schematicView = { scale: 1, tx: 0, ty: 0 };
+      schematicLayout = null;
       const badge = document.getElementById('circuit-badge');
       badge.textContent = { upload: 'Uploaded netlist', demo: 'Demo fault (injected)' }[data.source] || 'Synthesized 65nm';
       renderCircuitSchematic();
-      renderGraph(currentCircuitData);
+      // vis-network is built lazily: a 12k-node physics layout would block the page in schematic view
+      if (activeVisualView === 'graph') renderGraph(currentCircuitData);
+      else if (network) { network.destroy(); network = null; graphNodesDS = graphEdgesDS = null; }
+      if (window.Assistant) Assistant.onCircuitLoaded(currentSource);
     }
 
     async function init() {
@@ -441,73 +471,83 @@ HTML_CONTENT = """<!DOCTYPE html>
       runInference(true);
     }
 
-    /* ------------------------------------------------------------
-       RICH GATE-LEVEL SCHEMATIC & SUB-CIRCUIT BOUNDARY RENDERER
-       ------------------------------------------------------------ */
-    function renderCircuitSchematic(resetZoom = false) {
-      if (!currentCircuitData || !currentCircuitData.nodes) return;
-      
-      const canvas = document.getElementById('schematic-canvas');
-      const ctx = canvas.getContext('2d');
-      const container = document.getElementById('schematic-canvas-container');
-      
-      canvas.width = container.clientWidth * window.devicePixelRatio;
-      canvas.height = container.clientHeight * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      
-      ctx.clearRect(0, 0, width, height);
-      
-      // Compute gate level positions (Topological Rank columns)
+    function computeSchematicLayout(width, height) {
       const nodes = currentCircuitData.nodes;
       const edges = currentCircuitData.edges;
-      
+
       // Calculate in-degree rank
       const ranks = {};
       nodes.forEach(n => ranks[n.id] = 0);
-      
       edges.forEach(([u, v]) => {
         if (ranks[v] !== undefined && ranks[u] !== undefined) {
           ranks[v] = Math.max(ranks[v], ranks[u] + 1);
         }
       });
-      
+
       const maxRank = Math.max(...Object.values(ranks), 1);
       const cols = Math.min(maxRank + 2, 6);
-      
       const colBuckets = Array.from({ length: cols }, () => []);
       nodes.forEach(n => {
         const colIdx = Math.min(ranks[n.id] || 0, cols - 1);
         colBuckets[colIdx].push(n);
       });
-      
+
       // Assign (x, y) coordinates to each gate
       const positions = {};
       const gateWidth = 85;
       const gateHeight = 32;
       const colSpacing = (width - 120) / Math.max(cols - 1, 1);
-      
       colBuckets.forEach((bucket, colIdx) => {
         const rowSpacing = Math.min((height - 80) / Math.max(bucket.length, 1), 50);
         const startY = (height - bucket.length * rowSpacing) / 2 + 20;
-        
         bucket.forEach((node, rowIdx) => {
-          positions[node.id] = {
-            x: 60 + colIdx * colSpacing,
-            y: startY + rowIdx * rowSpacing,
-            node: node
-          };
+          positions[node.id] = { x: 60 + colIdx * colSpacing, y: startY + rowIdx * rowSpacing, node: node };
         });
       });
+      return { positions, gateWidth, gateHeight, width, height, data: currentCircuitData };
+    }
+
+    /* ------------------------------------------------------------
+       RICH GATE-LEVEL SCHEMATIC & SUB-CIRCUIT BOUNDARY RENDERER
+       (wheel = zoom, drag = pan, click = select; overlays are drawn
+        on #schematic-overlay by overlays.js)
+       ------------------------------------------------------------ */
+    function renderCircuitSchematic(resetZoom = false) {
+      if (!currentCircuitData || !currentCircuitData.nodes) return;
+
+      const canvas = document.getElementById('schematic-canvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('schematic-canvas-container');
+      const dpr = window.devicePixelRatio || 1;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      if (resetZoom) schematicView = { scale: 1, tx: 0, ty: 0 };
+      if (!schematicLayout || schematicLayout.data !== currentCircuitData
+          || schematicLayout.width !== width || schematicLayout.height !== height) {
+        schematicLayout = computeSchematicLayout(width, height);
+      }
+      const { positions, gateWidth, gateHeight } = schematicLayout;
+      const nodes = currentCircuitData.nodes;
+      const edges = currentCircuitData.edges;
+      const v = schematicView;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(dpr * v.scale, 0, 0, dpr * v.scale, dpr * v.tx, dpr * v.ty);
+
+      // world-space viewport for culling (keeps large circuits responsive)
+      const vx0 = -v.tx / v.scale - 20, vy0 = -v.ty / v.scale - 20;
+      const vx1 = (width - v.tx) / v.scale + 20, vy1 = (height - v.ty) / v.scale + 20;
+      const visible = p => p.x + gateWidth >= vx0 && p.x <= vx1 && p.y + gateHeight >= vy0 && p.y <= vy1;
 
       // 1. Draw Identified Sub-Circuit Shaded Regions (Bounding Envelopes)
       if (currentSubcircuits.length > 0) {
         currentSubcircuits.forEach((sc, scIdx) => {
           const scGatePos = sc.gate_ids.map(id => positions[id]).filter(Boolean);
           if (scGatePos.length === 0) return;
-          
+
           let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
           scGatePos.forEach(p => {
             minX = Math.min(minX, p.x - 18);
@@ -515,35 +555,31 @@ HTML_CONTENT = """<!DOCTYPE html>
             maxX = Math.max(maxX, p.x + gateWidth + 18);
             maxY = Math.max(maxY, p.y + gateHeight + 14);
           });
-          
+          if (maxX < vx0 || minX > vx1 || maxY < vy0 || minY > vy1) return;
+
           const padding = 12;
           const rectX = minX - padding;
           const rectY = minY - padding;
           const rectW = Math.max(maxX - minX + padding * 2, 110);
           const rectH = Math.max(maxY - minY + padding * 2, 60);
-          
           const cfg = classColors[sc.class_id] || classColors[2];
-          
-          // Draw soft glowing shaded boundary region
+
           ctx.save();
           ctx.fillStyle = cfg.fill;
           ctx.strokeStyle = cfg.border;
           ctx.lineWidth = 1.5;
           ctx.setLineDash([4, 4]);
-          
-          // Rounded rect
           ctx.beginPath();
           ctx.roundRect(rectX, rectY, rectW, rectH, 16);
           ctx.fill();
           ctx.stroke();
-          
-          // Sub-circuit Header Label Pill
+
           ctx.fillStyle = cfg.badge;
           ctx.setLineDash([]);
           ctx.beginPath();
           ctx.roundRect(rectX + 10, rectY - 10, Math.min(rectW - 20, 160), 20, 6);
           ctx.fill();
-          
+
           ctx.fillStyle = "#ffffff";
           ctx.font = "bold 10px Inter, sans-serif";
           ctx.fillText(`Module #${scIdx+1}: ${sc.class_name} (${sc.size} gates)`, rectX + 16, rectY + 4);
@@ -551,53 +587,70 @@ HTML_CONTENT = """<!DOCTYPE html>
         });
       }
 
-      // 2. Draw Interconnecting Wires
-      ctx.save();
+      // 2. Draw Interconnecting Wires (one path: fast on 20k+ wires)
+      const onScreenRow = v.scale * Math.min(gateHeight, (height - 80) / Math.max(nodes.length / 6, 1));
       ctx.lineWidth = 1.2;
-      edges.forEach(([u, v]) => {
+      ctx.strokeStyle = "#475569";
+      ctx.beginPath();
+      edges.forEach(([u, w]) => {
         const p1 = positions[u];
-        const p2 = positions[v];
-        if (p1 && p2) {
-          ctx.strokeStyle = "#475569";
-          ctx.beginPath();
+        const p2 = positions[w];
+        if (p1 && p2 && (visible(p1) || visible(p2))) {
           ctx.moveTo(p1.x + gateWidth, p1.y + gateHeight / 2);
           const midX = (p1.x + gateWidth + p2.x) / 2;
           ctx.bezierCurveTo(midX, p1.y + gateHeight / 2, midX, p2.y + gateHeight / 2, p2.x, p2.y + gateHeight / 2);
-          ctx.stroke();
         }
       });
-      ctx.restore();
+      ctx.stroke();
 
-      // 3. Draw Gate Boxes
+      // 3. Draw Gate Boxes: batched per class colour; labels only when readable on screen
+      const byColour = {};
+      const labelled = [];
       nodes.forEach(n => {
         const pos = positions[n.id];
-        if (!pos) return;
-        
+        if (!pos || !visible(pos)) return;
         const cfg = classColors[n.ground_truth] || classColors[2];
-        
-        ctx.save();
-        ctx.fillStyle = "#0f172a";
-        ctx.strokeStyle = cfg.border;
-        ctx.lineWidth = 1.5;
-        
+        (byColour[cfg.border] = byColour[cfg.border] || []).push(pos);
+        labelled.push(n);
+      });
+      ctx.lineWidth = 1.5;
+      ctx.fillStyle = "#0f172a";
+      for (const [colour, list] of Object.entries(byColour)) {
+        ctx.strokeStyle = colour;
         ctx.beginPath();
-        ctx.roundRect(pos.x, pos.y, gateWidth, gateHeight, 6);
+        list.forEach(pos => ctx.roundRect(pos.x, pos.y, gateWidth, gateHeight, 6));
         ctx.fill();
         ctx.stroke();
-        
-        // Gate Cell Type Label
-        ctx.fillStyle = "#f8fafc";
-        ctx.font = "bold 9px 'JetBrains Mono', monospace";
-        const labelText = n.cell_type.split('_')[0] || n.cell_type;
-        ctx.fillText(labelText, pos.x + 8, pos.y + 14);
-        
-        // Gate Instance Name
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "8px 'JetBrains Mono', monospace";
-        const instText = n.label.length > 12 ? n.label.substring(0, 10) + '..' : n.label;
-        ctx.fillText(instText, pos.x + 8, pos.y + 25);
-        ctx.restore();
-      });
+      }
+      if (onScreenRow >= 9 || labelled.length < 400) {
+        labelled.forEach(n => {
+          const pos = positions[n.id];
+          // Gate Cell Type Label
+          ctx.fillStyle = "#f8fafc";
+          ctx.font = "bold 9px 'JetBrains Mono', monospace";
+          ctx.fillText(n.cell_type.split('_')[0] || n.cell_type, pos.x + 8, pos.y + 14);
+          // Gate Instance Name
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "8px 'JetBrains Mono', monospace";
+          ctx.fillText(n.label.length > 12 ? n.label.substring(0, 10) + '..' : n.label, pos.x + 8, pos.y + 25);
+        });
+      }
+
+      if (window.Overlays) Overlays.drawCanvas();
+    }
+
+    function showGateInspector(nodeId) {
+      const node = currentCircuitData && currentCircuitData.nodes[nodeId];
+      if (!node) return;
+      document.getElementById('node-inspector').classList.remove('hidden');
+      document.getElementById('inspector-badge').textContent = `Gate #${node.id}`;
+      document.getElementById('node-details').innerHTML = `
+        <strong>Gate Name:</strong> <span class="text-white">${node.label}</span> |
+        <strong>Standard Cell:</strong> <span class="text-cyan-300">${node.cell_type}</span> |
+        <strong>Fan-In:</strong> ${node.in_degree} |
+        <strong>Fan-Out:</strong> ${node.out_degree} |
+        <strong>Classification:</strong> <span class="px-2 py-0.5 rounded text-white font-semibold" style="background:${node.color}">${node.class_name}</span>
+      `;
     }
 
     /* ------------------------------------------------------------
@@ -607,7 +660,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (!data || !data.nodes) return;
       document.getElementById('graph-stats').textContent = `${data.nodes.length} Gates (Nodes) | ${data.edges.length} Interconnects (Edges)`;
       
-      const nodes = new vis.DataSet(data.nodes.map(n => ({
+      const nodes = graphNodesDS = new vis.DataSet(data.nodes.map(n => ({
         id: n.id,
         label: n.label.length > 15 ? n.label.substring(0, 12) + '..' : n.label,
         color: {
@@ -621,7 +674,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         title: `${n.label} [${n.cell_type}] - Class: ${n.class_name}`
       })));
 
-      const edges = new vis.DataSet(data.edges.map(e => ({
+      const edges = graphEdgesDS = new vis.DataSet(data.edges.map(e => ({
         from: e[0],
         to: e[1],
         arrows: { to: { enabled: true, scaleFactor: 0.6 } },
@@ -642,22 +695,14 @@ HTML_CONTENT = """<!DOCTYPE html>
       if (network) network.destroy();
       network = new vis.Network(container, networkData, options);
 
+      network.once('stabilizationIterationsDone', () => {
+        if (data.nodes.length > 1500) network.setOptions({ physics: false });   // keep big graphs responsive
+        if (window.Overlays) Overlays.applyGraph();
+      });
+      if (window.Overlays) Overlays.applyGraph();
+
       network.on("click", function (params) {
-        if (params.nodes.length > 0) {
-          const nodeId = params.nodes[0];
-          const node = data.nodes.find(n => n.id === nodeId);
-          if (node) {
-            document.getElementById('node-inspector').classList.remove('hidden');
-            document.getElementById('inspector-badge').textContent = `Gate #${node.id}`;
-            document.getElementById('node-details').innerHTML = `
-              <strong>Gate Name:</strong> <span class="text-white">${node.label}</span> | 
-              <strong>Standard Cell:</strong> <span class="text-cyan-300">${node.cell_type}</span> | 
-              <strong>Fan-In:</strong> ${node.in_degree} | 
-              <strong>Fan-Out:</strong> ${node.out_degree} | 
-              <strong>Classification:</strong> <span class="px-2 py-0.5 rounded text-white font-semibold" style="background:${node.color}">${node.class_name}</span>
-            `;
-          }
-        }
+        if (params.nodes.length > 0 && typeof params.nodes[0] === 'number') showGateInspector(params.nodes[0]);
       });
     }
 
@@ -765,6 +810,8 @@ HTML_CONTENT = """<!DOCTYPE html>
       window.addEventListener('resize', () => renderCircuitSchematic());
     };
   </script>
+  <script src="/static/overlays.js"></script>
+  <script src="/static/assistant.js"></script>
 </body>
 </html>
 """
@@ -774,6 +821,27 @@ def _load_parsed(ref):
     if parsed is None:
         raise NetlistParseError('No "module <name> ( ... );" declaration found.')
     return parsed
+
+
+def _baseline_predict(model):
+    """Weak baseline GCN predictions, used for model-based hints when GraphSAINT has none."""
+    if model['num_gates'] == 0:
+        return []
+    return gnn_model.evaluate(model['features'], model['edges'], model['labels'])['predictions']
+
+
+# Configured by make_server(); the LLM client is injectable so tests never hit the network.
+SERVICE = None
+ASSISTANT = None
+
+
+def _ref_from(data):
+    return resolve_circuit(circuit_name=data.get('circuit_name'), upload_id=data.get('upload_id'))
+
+
+def _public_analysis(result):
+    """What /api/analyze returns (no predictions array, no raw evidence dump)."""
+    return {k: result[k] for k in ('intent', 'findings', 'stats', 'cached', 'llm_available', 'honesty_notes')}
 
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
@@ -816,6 +884,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             self._send_error_json(e.status, e.error_code, e.message)
         except NetlistParseError as e:
             self._send_error_json(400, 'INVALID_NETLIST', f'Could not parse netlist: {e}')
+        except LLMError as e:
+            if e.kind == 'unavailable':
+                self._send_json(503, {'error_code': 'ASSISTANT_UNAVAILABLE', 'reason': e.message,
+                                      'message': e.message})
+            else:
+                self._send_json(502, {'error_code': 'ASSISTANT_ERROR', 'message': e.message})
         except Exception:
             traceback.print_exc()
             self._send_error_json(500, 'INTERNAL_ERROR', 'Internal server error.')
@@ -848,6 +922,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'nodes': nodes,
                 'edges': edges
             })
+        elif path == '/api/assistant/status':
+            self._send_json(200, ASSISTANT.status())
         elif path.startswith('/static/'):
             self._serve_static(path[len('/static/'):])
         else:
@@ -938,11 +1014,52 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'gnn_re_available': gnn_re_metrics is not None,
                 'gnn_re_message': gnn_re_message
             })
+
+        elif path == '/api/analyze':
+            data = self._read_json()
+            result = SERVICE.analyze(_ref_from(data), regenerate=bool(data.get('regenerate')))
+            self._send_json(200, _public_analysis(result))
+
+        elif path == '/api/assistant/report':
+            data = self._read_json()
+            ref = _ref_from(data)
+            self._send_json(200, ASSISTANT.generate_report(ref, regenerate=bool(data.get('regenerate'))))
+
+        elif path == '/api/assistant/chat':
+            data = self._read_json()
+            ref = _ref_from(data)
+            message = data.get('message')
+            if not isinstance(message, str) or not message.strip():
+                raise CircuitRefError(400, 'INVALID_MESSAGE', 'message must be a non-empty string.')
+            if len(message) > MAX_MESSAGE_CHARS:
+                raise CircuitRefError(413, 'MESSAGE_TOO_LONG', f'message exceeds {MAX_MESSAGE_CHARS} characters.')
+            session_id = data.get('session_id')
+            if session_id is not None and (not isinstance(session_id, str) or len(session_id) > 64):
+                raise CircuitRefError(400, 'INVALID_SESSION', 'Invalid session_id.')
+            self._send_json(200, ASSISTANT.chat(session_id, ref, message))
         else:
             self._send_error_json(404, 'NOT_FOUND', 'Not found.')
 
 
-def make_server(host=HOST, port=PORT):
+def configure_assistant(llm=None, probe=True):
+    """Wire the analysis service + assistant. `llm` is injectable (tests pass a fake)."""
+    global SERVICE, ASSISTANT
+    if llm is None:
+        llm = LLMClient()
+    SERVICE = AnalysisService(llm, _baseline_predict)
+    ASSISTANT = Assistant(llm, SERVICE)
+    if probe and hasattr(llm, 'probe'):
+        if llm.config.api_key:
+            llm.reason = 'checking the model (startup probe in progress)'
+            threading.Thread(target=llm.probe, name='llm-probe', daemon=True).start()
+        else:
+            llm.reason = 'OPENAI_API_KEY is not set in ML_VLSI/.env'
+    return ASSISTANT
+
+
+def make_server(host=HOST, port=PORT, llm=None, probe=True):
+    if ASSISTANT is None or llm is not None:
+        configure_assistant(llm, probe)
     http.server.ThreadingHTTPServer.allow_reuse_address = True
     server = http.server.ThreadingHTTPServer((host, port), RequestHandler)
     server.daemon_threads = True

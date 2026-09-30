@@ -4,3 +4,5 @@ __pycache__/
 *.pyo
 uploads/
 .pytest_cache/
+.venv/
+verification/*.log

@@ -23,6 +23,39 @@ from collections import OrderedDict, defaultdict, deque
 
 from gnn_engine import extract_subcircuit_boundaries
 
+# check -> (category, certainty, what passing means)
+CHECK_CATALOG = {
+    'missing_pin': ('electrical', 'fact', 'every library pin of every cell is connected'),
+    'floating_net': ('electrical', 'fact', 'every net that is read has a driver'),
+    'multi_driver': ('electrical', 'fact', 'no net has more than one driver'),
+    'undriven_po': ('electrical', 'fact', 'every primary output is driven'),
+    'dangling_output': ('electrical', 'fact', 'every gate output is read or is a primary output'),
+    'carry_out_unread': ('electrical', 'fact', 'every full/half-adder carry-out is read'),
+    'unused_pi': ('electrical', 'fact', 'every primary input is used'),
+    'const_input': ('electrical', 'fact', 'inputs tied to constants are listed (info only)'),
+    'unknown_cell': ('electrical', 'fact', 'all cell types are in the cell library'),
+    'unreachable_from_pi': ('reachability', 'fact', 'every gate is reachable from a primary input'),
+    'no_path_to_po': ('reachability', 'fact', 'every gate reaches a primary output'),
+    'isolated_component': ('structural', 'likely', 'the circuit forms one connected component'),
+    'combinational_loop': ('structural', 'likely', 'there are no combinational loops'),
+    'carry_break': ('structural', 'likely', 'arithmetic buses show an unbroken carry/ripple dependency pattern'),
+    'bit_slice_anomaly': ('structural', 'likely', 'every bit slice of arithmetic buses matches its neighbours'),
+    'intent_dependency': ('intent', 'likely', 'the inferred function\'s expected dependencies hold'),
+    'class_disagrees_with_neighbours': ('gnn_suspicion', 'suspicion', 'model predictions agree with neighbours'),
+    'low_confidence_prediction': ('gnn_suspicion', 'suspicion', 'model predictions are confident'),
+    'singleton_subcircuit': ('gnn_suspicion', 'suspicion', 'no one-gate predicted sub-circuits'),
+}
+
+
+def certainty(finding):
+    """fact (deterministic electrical/reachability), likely (structural/intent), suspicion (model-based)."""
+    if finding['category'] == 'gnn_suspicion':
+        return 'suspicion'
+    if finding['category'] in ('electrical', 'reachability') and finding['confidence'] >= 1.0:
+        return 'fact'
+    return 'likely'
+
+
 SEVERITY_ORDER = {'error': 0, 'warning': 1, 'info': 2}
 CATEGORY_ORDER = {'electrical': 0, 'reachability': 1, 'structural': 2, 'intent': 3, 'gnn_suspicion': 4}
 GROUP_THRESHOLD = 25          # more findings than this per (check, block) are merged
@@ -797,6 +830,212 @@ def run_checks(model, predictions=None, probabilities=None, prediction_source=No
         'elapsed_ms': round((time.time() - t0) * 1000, 1),
     }
     return {'findings': findings, 'stats': stats}
+
+
+# ---------------------------------------------------------------------------
+# Intent-aware checks: run the templates chosen by intent_analyzer
+# ---------------------------------------------------------------------------
+
+INTENT_TEMPLATES = ('adder_triangular', 'carry_chain', 'multiplier_pp_complete',
+                    'comparator_all_bits', 'subtractor_inverted')
+
+
+def support_wrt(ctx, source_nets, order=None):
+    """Bitset support of every net w.r.t. an arbitrary list of source nets (PI or internal).
+    Propagation stops at source nets. Returns (index_of_source, net_support(net))."""
+    if order is None:
+        order, cyclic = _topo_order(ctx)
+        order = order + cyclic
+    idx = {n: i for i, n in enumerate(source_nets)}
+    nets = ctx.m['nets']
+    gate_sup = [0] * ctx.n
+
+    def net_sup(net):
+        if net in idx:
+            return 1 << idx[net]
+        s = 0
+        for d in nets[net]['drivers'] if net in nets else []:
+            if 'gate_id' in d:
+                s |= gate_sup[d['gate_id']]
+        return s
+
+    for g in order:
+        s = 0
+        for _, net in ctx.in_nets[g]:
+            s |= net_sup(net)
+        gate_sup[g] = s
+
+    def driven_sup(net):
+        """Support of whatever drives `net`, even if `net` is itself a source."""
+        s = 0
+        for d in nets[net]['drivers'] if net in nets else []:
+            if 'gate_id' in d:
+                s |= gate_sup[d['gate_id']]
+        return s
+
+    net_sup.driven = driven_sup
+    return idx, net_sup
+
+
+def _target_bits(model, name):
+    """[(significance, canonical net)] for a bus name or a scalar net name."""
+    bus = model['buses'].get(name)
+    names = bus['bits'] if bus else [name]
+    out = []
+    for sig, bit in enumerate(names):
+        canon = _canon(model, bit)
+        e = model['nets'].get(canon)
+        if e is not None and any('gate_id' in d for d in e['drivers']):
+            out.append((sig, canon))
+    return out
+
+
+def live_significances(model, bus):
+    """Significances of a bus's bits that are actually driven (by a gate, PI or constant).
+    Synthesis often leaves declared result bits unused; nothing can depend on those."""
+    live = set()
+    for sig, bit in enumerate(model['buses'][bus]['bits'] if bus in model['buses'] else [bus]):
+        e = model['nets'].get(_canon(model, bit))
+        if e is not None and e['drivers']:
+            live.add(sig)
+    return frozenset(live)
+
+
+def expected_support(sig, live):
+    """Arithmetic ripple expectation: result bit `sig` depends on live operand bits 0..sig."""
+    return frozenset(i for i in live if i <= sig)
+
+
+def _dependency_profile(ctx, target, operand, order):
+    """For each driven bit of `target`: (sig, net, set of operand significances it depends on).
+    Returns (rows, live operand significances)."""
+    m = ctx.m
+    obits = [_canon(m, b) for b in (m['buses'][operand]['bits'] if operand in m['buses'] else [operand])]
+    idx, net_sup = support_wrt(ctx, obits, order)
+    rows = []
+    for sig, net in _target_bits(m, target):
+        s = net_sup.driven(net)
+        rows.append((sig, net, frozenset(i for i in range(len(obits)) if s >> i & 1)))
+    return rows, live_significances(m, operand)
+
+
+def _existing_for_bus(findings, bus, sigs):
+    ids = []
+    for f in findings:
+        if f.get('bus') == bus and f.get('bit_run'):
+            lo, hi = f['bit_run']
+            if any(lo <= s <= hi for s in sigs):
+                ids.append(f['id'])
+    return ids
+
+
+def run_intent_checks(model, templates, base_findings, start_index=None):
+    """
+    Check validated intent templates against the netlist.
+    Returns (new_findings, template_results). Deviations already reported by a
+    structural finding are linked to it instead of being reported twice.
+    """
+    ctx = _Ctx(model)
+    order, cyclic = _topo_order(ctx)
+    order = order + cyclic
+    new, results = [], []
+
+    def drivers_of(nets_):
+        gs = set()
+        for n in nets_:
+            for d in model['nets'].get(n, {}).get('drivers', []):
+                if 'gate_id' in d:
+                    gs.add(d['gate_id'])
+        return sorted(gs)
+
+    for t in templates:
+        kind, p = t['template'], t['params']
+        res = {'template': kind, 'params': p, 'status': 'pass', 'finding_ids': [], 'note': ''}
+        if kind in ('adder_triangular', 'multiplier_pp_complete', 'subtractor_inverted'):
+            out = p['out_bus']
+            operands = p['in_buses'] if kind != 'subtractor_inverted' else [p['minuend'], p['subtrahend']]
+            bad_sigs, parts, bad_nets = set(), [], []
+            for op in operands:
+                rows, live = _dependency_profile(ctx, out, op, order)
+                for sig, net, S in rows:
+                    E = expected_support(sig, live)
+                    if S != E:
+                        bad_sigs.add(sig)
+                        bad_nets.append(net)
+                        miss, extra = sorted(E - S), sorted(S - E)
+                        parts.append(f'{net} (significance {sig}) ' +
+                                     ('; '.join(x for x in [
+                                         f'misses {op} bits {_fmt_range(miss)}' if miss else '',
+                                         f'unexpectedly uses {op} bits {_fmt_range(extra)}' if extra else ''] if x)))
+            if kind == 'subtractor_inverted':
+                res['note'] = ('Dependency pattern checked; the inverted subtrahend path itself is not '
+                               'structurally verifiable.')
+            if bad_sigs:
+                res['status'] = 'fail'
+                covered = _existing_for_bus(base_findings, out, bad_sigs)
+                if covered:
+                    res['finding_ids'] = covered
+                    res['note'] = (res['note'] + ' Deviation already reported by ' + ', '.join(covered) + '.').strip()
+                else:
+                    role = {'adder_triangular': 'an adder', 'multiplier_pp_complete': 'a multiplier',
+                            'subtractor_inverted': 'a subtractor'}[kind]
+                    f = _finding('intent_dependency', 'intent', 'warning',
+                                 f'If {out} is {role} of {", ".join(operands)}, output bit of significance w must '
+                                 f'depend on exactly the operand bits of significance 0..w. Deviations: '
+                                 + '; '.join(parts[:6]) + ('' if len(parts) <= 6 else f' (+{len(parts) - 6} more)') + '.',
+                                 gate_ids=drivers_of(bad_nets)[:MAX_SAMPLE], nets=bad_nets[:MAX_SAMPLE],
+                                 confidence=0.85, template=kind, bus=out,
+                                 bit_run=[min(bad_sigs), max(bad_sigs)])
+                    new.append(f)
+                    res['finding_ids'] = [f]
+        elif kind == 'comparator_all_bits':
+            out = p['out_bus']
+            missing = []
+            for op in p['in_buses']:
+                rows, live = _dependency_profile(ctx, out, op, order)
+                for sig, net, S in rows:
+                    if not live <= S:
+                        missing.append((net, op, sorted(live - S)))
+            if missing:
+                res['status'] = 'fail'
+                f = _finding('intent_dependency', 'intent', 'warning',
+                             f'A comparator result must depend on every bit of its operands. '
+                             + '; '.join(f'{n} misses {op} bits {_fmt_range(ms)}' for n, op, ms in missing[:6]) + '.',
+                             gate_ids=drivers_of([n for n, _, _ in missing])[:MAX_SAMPLE],
+                             nets=[n for n, _, _ in missing][:MAX_SAMPLE], confidence=0.85, template=kind, bus=out)
+                new.append(f)
+                res['finding_ids'] = [f]
+        elif kind == 'carry_chain':
+            prefix = p['block_prefix']
+            gates = [g for g in range(ctx.n)
+                     if (model['hier_prefix'][g] + '/').startswith(prefix.rstrip('/') + '/')
+                     and ctx.cell[g].startswith(ADDER_CELL_PREFIXES)]
+            if not gates:
+                res['status'] = 'not_checkable'
+                res['note'] = f'No full/half-adder cells in block {prefix}; synthesized as generic logic.'
+            else:
+                gs = set(gates)
+                related = [f['id'] for f in base_findings
+                           if f['check'] in ('missing_pin', 'floating_net', 'carry_out_unread', 'dangling_output',
+                                             'carry_break', 'multi_driver') and gs & set(f['gate_ids'])]
+                if related:
+                    res['status'] = 'fail'
+                    res['finding_ids'] = related
+                    res['note'] = f'{len(gates)} adder cells in {prefix}; broken links reported by ' + ', '.join(related)
+                else:
+                    res['note'] = f'All carry outputs of {len(gates)} adder cells in {prefix} are read and all inputs connected.'
+        else:
+            res['status'] = 'not_checkable'
+            res['note'] = 'Unknown template.'
+        results.append(res)
+
+    # assign ids after the base findings
+    n0 = start_index if start_index is not None else len(base_findings)
+    for i, f in enumerate(new, 1):
+        f['id'] = f'F{n0 + i:03d}'
+    for r in results:
+        r['finding_ids'] = [x['id'] if isinstance(x, dict) else x for x in r['finding_ids']]
+    return new, results
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 // DEMO FAULT (float_net) injected into Train_add_mul_comp_sub_4_bit_Syn_65nm.v by fault_injector.py.
-// Reconnected pin CI of adder_1/U7 (ADDF_X1M_A9TH) from \adder_1/n4 to a new undriven net n_open_60; adder_1/U6.CO now drives nothing.
+// Reconnected pin CI of adder_1/U7 (ADDF_X1M_A9TH) from \adder_1/n4 to a new undriven net n100060; adder_1/U6.CO now drives nothing.
 /////////////////////////////////////////////////////////////
 // Created by: Synopsys DC Ultra(TM) in wire load mode
 // Version   : O-2018.06-SP5-5
@@ -157,7 +157,7 @@ module add_mul_comp_sub_4_bit ( a, b, Result );
   ADDF_X1M_A9TH \subtractor_2/intadd_1/U4  ( .A(\subtractor_2/intadd_1/B[0] ), 
         .B(b[2]), .CI(\subtractor_2/intadd_1/CI ), .CO(
         \subtractor_2/intadd_1/n3 ), .S(Result_sub2[6]) );
-  ADDF_X1M_A9TH \adder_1/U7  ( .A(b[1]), .B(a[1]), .CI(n_open_60 ), .CO(
+  ADDF_X1M_A9TH \adder_1/U7  ( .A(b[1]), .B(a[1]), .CI(n100060 ), .CO(
         \adder_1/n1 ), .S(Result_add[5]) );
   ADDF_X1M_A9TH \adder_1/U6  ( .A(b[2]), .B(a[2]), .CI(\adder_1/n3 ), .CO(
         \adder_1/n4 ), .S(Result_add[6]) );

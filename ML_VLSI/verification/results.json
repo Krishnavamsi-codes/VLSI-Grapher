@@ -1,0 +1,108 @@
+{
+ "scenarios": {
+  "1_clean": {
+   "metric": "94.6%",
+   "health": "Healthy: no connection problems found",
+   "intent": "Output select logic, 8-bit adder, 8x8 multiplier",
+   "status": "offline-stand-in (not an LLM)",
+   "report_health": "ok",
+   "load_s": 0.21,
+   "screenshot": "1_clean_overview.png"
+  },
+  "2_cut_carry": {
+   "scale": 2.0371462264150946,
+   "focus_gates": [
+    23,
+    24
+   ],
+   "ghost": [
+    {
+     "from_gate": 24,
+     "from_pin": "CO",
+     "to_gate": 23,
+     "to_pin": "CI",
+     "reason": "adder_1/intadd_0/U5.CI is unconnected, and adder_1/intadd_0/U6.CO drives \\adder_1/intadd_0/n5, which nothing reads.",
+     "confidence": 0.9
+    }
+   ],
+   "inspector": "Gate #23",
+   "item_title": "Missing pin",
+   "item_text": "ERROR\nfact\nMissing pin\nWhat: Input pin CI of adder_1/intadd_0/U5 (ADDF_X1M_A9TH) is not connected to any net.\nWhere: G23\nWhy it matters: the cell computes with an undefined input, so every bit downstream of it is unreliable\nFix: Connect G24 pin CO to G23 pin CI (suggestion, not applied).\nSUGGESTION, NOT APPLIED\n// Suggestion, not applied\n// connect G24.CO -> G23.CI\nFindings: F001",
+   "load_s": 0.27,
+   "scale_before": 1,
+   "canvas_screenshot": "2_cut_carry_canvas.png",
+   "graph_ghost_edge": {
+    "from": 24,
+    "to": 23,
+    "label": "missing?",
+    "dashes": true,
+    "title": "Suggested missing connection (not applied)\nadder_1/intadd_0/U5.CI is unconnected, and adder_1/intadd_0/U6.CO drives \\adder_1/intadd_0/n5, which nothing reads.\nconfidence 0.9"
+   },
+   "graph_screenshot": "2_cut_carry_graph.png"
+  },
+  "3_miswire": {
+   "load_s": 0.42,
+   "canvas_screenshot": "3_miswire_canvas.png",
+   "finding": "bit_slice_anomaly",
+   "ghost_edges": [
+    {
+     "from": "ov-pi-0",
+     "to": 45,
+     "label": "missing?"
+    },
+    {
+     "from": "ov-pi-1",
+     "to": 77,
+     "label": "missing?"
+    }
+   ],
+   "pi_stubs": [
+    "b[1]",
+    "b[0]"
+   ],
+   "graph_screenshot": "3_miswire_graph.png",
+   "overview_screenshot": "3_miswire_overview.png"
+  },
+  "4_upload": {
+   "metric": "N/A",
+   "note": "N/A: no GraphSAINT prediction for uploads. Sub-circuits use the baseline GNN.",
+   "intent": "Output select logic, 4-bit adder, 4x4 multiplier",
+   "health": "ok",
+   "notes": [
+    "Functional labels (ground truth) come from instance-name heuristics, not from verified design data.",
+    "This is an uploaded netlist: there is no GraphSAINT prediction; model-based hints use a weak baseline GCN."
+   ],
+   "screenshot": "4_upload.png"
+  },
+  "5_chat": {
+   "reply": "F001 is a missing pin (fact): Input pin CI of adder_1/intadd_0/U5 (ADDF_X1M_A9TH) is not connected to any net. Suggested fix (not applied): connect G24 pin CO to G23 pin CI.",
+   "trace": "1 tool call(s)",
+   "inspector": "Gate #24",
+   "focus_gates": [
+    24
+   ],
+   "chips": [
+    "F001",
+    "G24",
+    "G23"
+   ],
+   "screenshot": "5_chat.png"
+  },
+  "6_big_circuit": {
+   "gates": 12520,
+   "full_render_ms": 6.1,
+   "overlay_only_ms": 0,
+   "focus_200_gates_canvas_ms": 7.5,
+   "zoomed_render_ms": 7.3,
+   "ten_wheel_zooms_s": 8.3,
+   "load_and_analyze_s": 5.54,
+   "canvas_screenshot": "6_big_canvas.png",
+   "graph_view_ready_s": 139.3,
+   "physics_enabled_after_stabilize": false,
+   "focus_200_gates_graph_ms": 725.5,
+   "reapply_overlays_graph_ms": 795,
+   "graph_screenshot": "6_big_graph.png"
+  }
+ },
+ "console_errors": []
+}

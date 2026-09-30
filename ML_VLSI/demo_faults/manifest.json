@@ -16,7 +16,7 @@
   "base": "Train_add_mul_comp_sub_4_bit_Syn_65nm.v",
   "fault": "float_net",
   "seed": 0,
-  "description": "Reconnected pin CI of adder_1/U7 (ADDF_X1M_A9TH) from \\adder_1/n4 to a new undriven net n_open_60; adder_1/U6.CO now drives nothing.",
+  "description": "Reconnected pin CI of adder_1/U7 (ADDF_X1M_A9TH) from \\adder_1/n4 to a new undriven net n100060; adder_1/U6.CO now drives nothing.",
   "expected_check": "floating_net",
   "expected_edge": {
    "from_gate": 61,
