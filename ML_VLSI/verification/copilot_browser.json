@@ -1,0 +1,353 @@
+{
+ "scenarios": {
+  "1_load_insights": {
+   "status": "qwen2.5-3b-16k",
+   "banner": " No timing, power or area data exists for this circuit (the cell library holds pin directions only; there are no liberty, SDF, SAIF/VCD or area files). Only structural indicators are available: gate levels, fan-out and gate counts. These are proxies, not measured delay, power or area.",
+   "opt_cards": 10,
+   "longest": "G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94",
+   "starter_groups": [
+    "UNDERSTAND",
+    "DEBUG",
+    "TIMING",
+    "POWER",
+    "AREA",
+    "OPTIMIZE",
+    "GRAPHSAINT"
+   ],
+   "modules_listed": 14,
+   "page_ready_s": 30.2,
+   "screenshot": "copilot_1_insights.png",
+   "highlighted_path_gates": 19
+  },
+  "2_gate_click_ask": {
+   "inspector": "Gate #20",
+   "ask_buttons": [
+    "Explain this gate",
+    "What drives it?",
+    "Critical path?",
+    "Optimize?"
+   ],
+   "pill": " Context: G20\n      (\"this\" / \"it\")",
+   "selected_gate": 20,
+   "reply": {
+    "text": "Gate G20 is an instance of the ADDF_X1M_A9TH cell within the adder_1/intadd_0 block. It has the following connections: - Input pin A is driven by the primary input a[1]. - Input pin B is driven by the primary input b[1]. - Input pin CI is driven by the output of G21 (net \\adder_1/intadd_0/n2). - Output pin CO feeds G16 (net \\adder_1/intadd_0/n1). - Output pin S feeds G2 (net Result_add[9]). The cell is currently predicted by the GraphSAINT model to be a Multiplier, which differs from its instance label \"Adder\". There are no findings associated with this gate.\n 1 unverifiable reference removed\n1 tool call(s)",
+    "chips": [
+     "G20",
+     "G21",
+     "G16",
+     "G2"
+    ],
+    "evidence": [],
+    "trace": [
+     "\u2713 get_gate({\"gate_id\":20}) auto"
+    ],
+    "error": null
+   },
+   "screenshot": "copilot_2_gate_ask.png"
+  },
+  "3_followups": {
+   "drives": {
+    "text": "Gate G20 is driven by the primary inputs a[1] and b[1], and the output of G21. It feeds G2 and G16. The GraphSAINT model predicts this gate as a Multiplier, which differs from its instance label \"Adder\". There are no findings associated with this gate.\n1 tool call(s)",
+    "chips": [
+     "G20",
+     "G21",
+     "G2",
+     "G16"
+    ],
+    "evidence": [],
+    "trace": [
+     "\u2713 get_gate({\"gate_id\":20}) auto"
+    ],
+    "error": null
+   },
+   "critical": {
+    "text": "AI explanation\nGate G20 is part of the adder_1/intadd_0 block and is an instance of the ADDF_X1M_A9TH cell. The gate is driven by the primary inputs a[1] and b[1], and it feeds G2 and G16. The fan-out of G20 is 2 pins (G2 and G16), and it has a fan-in of 1 gate (G21). The drive strength is indicated by the cell name suffix X1, which is a naming convention and not library data. The circuit does not have any timing, power, or area data, only structural indicators such as gate levels and fan-out.\n 1 unverifiable reference removed\nEvidence computed from the circuit (not written by the AI):\nG20 timing indicators\ndeterministic\n- 7 gate level(s) from the primary inputs up to G20; 3 level(s) from G20 to the end of its longest downstream path.\n- the longest path through G20 has 9 levels; the circuit maximum is 19.\n- G20 is NOT on a longest (critical) path (10 level(s) shorter than the longest path).\n- fan-out: G20 drives 2 pin(s) (G2, G16); fan-in gates: G21.\n- drive strength from the cell name suffix: X1 (naming convention, not library data).\n1 tool call(s)",
+    "chips": [
+     "G20",
+     "G2",
+     "G16",
+     "G20",
+     "G2",
+     "G16",
+     "G21"
+    ],
+    "evidence": [
+     "deterministic"
+    ],
+    "trace": [
+     "\u2713 timing_analysis({\"gate_id\":20}) auto"
+    ],
+    "error": null
+   },
+   "optimize": {
+    "text": "AI explanation\nThere is one optimization candidate for the gate G20 (ADDF_X1M_A9TH, block adder_1): - **O2 [performance] target**: ripple carry chain in adder_1 (6 adder cells). - **Reason**: A ripple-carry chain: each stage waits for the previous carry, so the chain length sets the carry delay. - **Evidence**: CO -> CI chain of 6 full/half-adder cells: G25, G24, G23, G22, G21, G20. - **Potential impact**: A carry-lookahead or parallel-prefix structure could shorten the carry path, at the cost of area; unmeasured. - **Confidence**: medium. - **Type**: structural heuristic. The gate G20 is not on a critical path (longest path is 10 levels shorter than the longest path in the circuit). The gate has a fan-out of 2 pins (G2 and G16) and a fan-in of 1 gate (G21). The gate level from the primary inputs to G20 is 7 levels, and the longest path through G20 is 9 levels, which is 3 levels shorter than the longest path in the circuit (19 levels). The drive strength is indicated by the cell name suffix X1 (a naming convention, not library data).\nEvidence computed from the circuit (not written by the AI):\nO2 [performance] ripple carry chain in adder_1 (6 adder cells)\nstructural heuristic\nReasonA ripple-carry chain: each stage waits for the previous carry, so the chain length sets the carry delay.\nEvidenceCO -> CI chain of 6 full/half-adder cells: G25, G24, G23, G22, G21, G20.\nImpactA carry-lookahead or parallel-prefix structure could shorten the carry path, at the cost of area; unmeasured. (confidence medium)\n1 tool call(s)",
+    "chips": [
+     "G20",
+     "G25",
+     "G24",
+     "G23",
+     "G22",
+     "G21",
+     "G20",
+     "G20",
+     "G2",
+     "G16",
+     "G21",
+     "G20",
+     "G20"
+    ],
+    "evidence": [
+     "structural heuristic"
+    ],
+    "trace": [
+     "\u2713 optimization_suggestions({\"category\":null,\"gate_id\":20}) auto"
+    ],
+    "error": null
+   },
+   "chip_click_focus_has_gate": true,
+   "screenshot": "copilot_3_followups.png"
+  },
+  "4_ppa": {
+   "timing": {
+    "text": "AI explanation\nThe circuit has the following longest paths: - **Path 1 (19 levels)**: G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> ...; from a[7]; to output Result[0]; blocks multiplier_1, top. - **Path 2 (18 levels)**: G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> ...; from a[7]; to output Result[1]; blocks multiplier_1, top. - **Path 3 (16 levels)**: G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G236 -> G79 -> G80 -> G13; from a[7]; to output Result[4]; blocks multiplier_1, top. The deepest outputs are: - Result[0] (19 levels) - Result[1] (18 levels) - Result[2] (16 levels) - Result[4] (16 levels) - Result[3] (15 levels) The circuit contains a ripple carry chain of 6 adder cells in the adder_1 block (G25, G24, G23, G22, G21, G20). Additionally, there is a ripple carry chain of 5 adder cells in the multiplier_1 block (G72, G63, G41, G37, G33). The highest fan-out nets are operation (16 loads, driven by primary input operation) and the inverters driving the outputs of the multiplier_1 block (G128, G131, G140, G135, each driving 8 loads).\nEvidence computed from the circuit (not written by the AI):\nLongest path: 19 gate levels\ndeterministic\nG132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> G237 -> G238 -> G0\nfrom a[7] to Result[0]\nunit-delay gate levels; real delay depends on cells and loads (no delay data)\nRipple carry chain: 6 adder cells (adder_1)\ndeterministic\nG25 -> G24 -> G23 -> G22 -> G21 -> G20\nHighest fan-out nets\ndeterministic\noperation: 16 loads, driver primary input operation\n\\multiplier_1/n115: 8 loads, driver G128 (INV_X0P7M_A9TH)\n\\multiplier_1/n116: 8 loads, driver G131 (INV_X0P7M_A9TH)\n\\multiplier_1/n126: 8 loads, driver G140 (INV_X0P7M_A9TH)\n\\multiplier_1/n127: 8 loads, driver G135 (INV_X0P7M_A9TH)\n1 tool call(s)",
+    "chips": [
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G34",
+     "G124",
+     "G125",
+     "G94",
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G34",
+     "G124",
+     "G125",
+     "G94",
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G236",
+     "G79",
+     "G80",
+     "G13",
+     "G25",
+     "G24",
+     "G23",
+     "G22",
+     "G21",
+     "G20",
+     "G72",
+     "G63",
+     "G41",
+     "G37",
+     "G33",
+     "G128",
+     "G131",
+     "G140",
+     "G135"
+    ],
+    "evidence": [
+     "deterministic",
+     "deterministic",
+     "deterministic"
+    ],
+    "trace": [
+     "\u2713 timing_analysis({\"gate_id\":null}) auto"
+    ],
+    "error": null
+   },
+   "perf": {
+    "text": "AI explanation\nBased on the optimization suggestions provided, there are several targets to investigate for potential performance improvements: 1. This path has 19 gates in series, from input(s) a[7] to output(s) Result[0]. The next output path has 18 levels. Reducing the propagation delay on this path may be achieved by restructuring or rebalancing the logic, but the actual benefit is unmeasured due to the lack of delay data. 2. **O2 [performance] target**: Ripple carry chain in adder_1 (6 adder cells). This chain of 6 full/half-adder cells (G25, G24, G23, G22, G21, G20) sets the carry delay. A carry-lookahead or parallel-prefix structure could potentially shorten the carry path, but this comes at the cost of area. The actual impact is unmeasured. 3. **O3 [performance] target**: Net operation (fan-out 16). This net is driven by the primary input operation and read by 16 pins. Reducing the load-dependent delay could be achieved by buffering, cloning the driver, or upsizing the driver, but the actual impact is unmeasured. 4. **O4 [performance] target**: Net \\multiplier_1/n115 (fan-out 8). This net is driven by G128 (INV_X0P7M_A9TH) and read by 8 pins. Reducing the load-dependent delay could be achieved by buffering, cloning the driver, or upsizing the driver, but the actual impact is unmeasured. 5. **O5 [performance] target**: Net \\multiplier_1/n116 (fan-out 8). This net is driven by G131 (INV_X0P7M_A9TH) and read by 8 pins. Reducing the load-dependent delay could be achieved by buffering, cloning the driver, or upsizing the driver, but the actual impact is unmeasured. These optimizations are based on structural heuristics and may require further analysis to determine the best approach for your specific design.\n 1 unverifiable reference removed\nEvidence computed from the circuit (not written by the AI):\nO1 [performance] longest path G132 -> G0 (19 gate levels)\nstructural heuristic\nReasonLongest combinational dependency in the circuit (unit-delay gate levels).\nEvidence19 gates in series: G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 ...; from input(s) a[7] to output(s) Result[0]; the next output path has 18 levels.\nImpactCould reduce worst-case propagation delay if logic on this path is restructured or rebalanced; actual benefit is unmeasured (no delay data). (confidence medium)\nO2 [performance] ripple carry chain in adder_1 (6 adder cells)\nstructural heuristic\nReasonA ripple-carry chain: each stage waits for the previous carry, so the chain length sets the carry delay.\nEvidenceCO -> CI chain of 6 full/half-adder cells: G25, G24, G23, G22, G21, G20.\nImpactA carry-lookahead or parallel-prefix structure could shorten the carry path, at the cost of area; unmeasured. (confidence medium)\nO3 [performance] net operation (fan-out 16)\nstructural heuristic\nReasonHigh fan-out load on one net.\nEvidenceoperation is driven by primary input operation and read by 16 pins.\nImpactBuffering, cloning the driver or upsizing it could reduce load-dependent delay; unmeasured. (confidence low)\nO4 [performance] net \\multiplier_1/n115 (fan-out 8)\nstructural heuristic\nReasonHigh fan-out load on one net and the driver cell name indicates a low drive strength (naming convention).\nEvidence\\multiplier_1/n115 is driven by G128 (INV_X0P7M_A9TH) and read by 8 pins.\nImpactBuffering, cloning the driver or upsizing it could reduce load-dependent delay; unmeasured. (confidence low)\nO5 [performance] net \\multiplier_1/n116 (fan-out 8)\nstructural heuristic\nReasonHigh fan-out load on one net and the driver cell name indicates a low drive strength (naming convention).\nEvidence\\multiplier_1/n116 is driven by G131 (INV_X0P7M_A9TH) and read by 8 pins.\nImpactBuffering, cloning the driver or upsizing it could reduce load-dependent delay; unmeasured. (confidence low)\n1 tool call(s)",
+    "chips": [
+     "G25",
+     "G24",
+     "G23",
+     "G22",
+     "G21",
+     "G20",
+     "G128",
+     "G131"
+    ],
+    "evidence": [
+     "structural heuristic",
+     "structural heuristic",
+     "structural heuristic",
+     "structural heuristic",
+     "structural heuristic"
+    ],
+    "trace": [
+     "\u2713 optimization_suggestions({\"category\":\"performance\",\"gate_id\":null}) auto"
+    ],
+    "error": null
+   },
+   "nano": {
+    "text": "AI explanation\nThe circuit does not have any delay data, so there are no specific nanosecond values for the critical path delay. However, the longest path in the circuit is 19 gate levels, from input(s) a[7] to output(s) Result[0], Result[1], and Result[4]. The critical paths are as follows: - **Path 1 (19 levels)**: a[7] -> G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> ... -> Result[0] - **Path 2 (18 levels)**: a[7] -> G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> ... -> Result[1] - **Path 3 (16 levels)**: a[7] -> G132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G236 -> G79 -> G80 -> G13 -> Result[4] These paths are the longest in the circuit and represent the critical paths for the outputs Result[0], Result[1], and Result[4]. The actual delay on these paths is not provided due to the lack of delay data in the circuit's data.\nEvidence computed from the circuit (not written by the AI):\nLongest path: 19 gate levels\ndeterministic\nG132 -> G156 -> G48 -> G51 -> G208 -> G104 -> G105 -> G224 -> G121 -> G101 -> G123 -> G109 -> G34 -> G124 -> G125 -> G94 -> G237 -> G238 -> G0\nfrom a[7] to Result[0]\nunit-delay gate levels; real delay depends on cells and loads (no delay data)\nRipple carry chain: 6 adder cells (adder_1)\ndeterministic\nG25 -> G24 -> G23 -> G22 -> G21 -> G20\nHighest fan-out nets\ndeterministic\noperation: 16 loads, driver primary input operation\n\\multiplier_1/n115: 8 loads, driver G128 (INV_X0P7M_A9TH)\n\\multiplier_1/n116: 8 loads, driver G131 (INV_X0P7M_A9TH)\n\\multiplier_1/n126: 8 loads, driver G140 (INV_X0P7M_A9TH)\n\\multiplier_1/n127: 8 loads, driver G135 (INV_X0P7M_A9TH)\n1 tool call(s)",
+    "chips": [
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G34",
+     "G124",
+     "G125",
+     "G94",
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G34",
+     "G124",
+     "G125",
+     "G94",
+     "G132",
+     "G156",
+     "G48",
+     "G51",
+     "G208",
+     "G104",
+     "G105",
+     "G224",
+     "G121",
+     "G101",
+     "G123",
+     "G109",
+     "G236",
+     "G79",
+     "G80",
+     "G13"
+    ],
+    "evidence": [
+     "deterministic",
+     "deterministic",
+     "deterministic"
+    ],
+    "trace": [
+     "\u2713 timing_analysis({\"gate_id\":null}) auto"
+    ],
+    "error": null
+   },
+   "screenshot": "copilot_4_ppa.png"
+  },
+  "5_graphsaint_module": {
+   "reply": {
+    "text": "AI explanation\nThis region is suspicious because GraphSAINT predicts that all gates within Module #1 are part of the Control Logic class. This prediction is based on the instance names of the gates, which are used as a heuristic by GraphSAINT. The prediction is not a circuit fact but a model-based suspicion (ML suspicion) and is not a wiring fault. Structurally, there is 1 gate (G0) in Module #1, and it is predicted to be part of the Control Logic class. The instance name labels agree with this prediction for this gate. The module is composed of a single block named \"top\" with 1 gate (AND2). Neighboring gates outside this module are predicted to be part of the Multiplier class. There are no deterministic connectivity findings that touch these gates, so any suspicion here is solely based on the model-based predictions from GraphSAINT. The finding F001 is a model-based suspicion that each gate in this module forms a one-gate \"sub-circuit,\" indicating that each gate is isolated and does not connect to any other gates within the module.\nEvidence computed from the circuit (not written by the AI):\nModule #1: GraphSAINT predicts Control Logic\nML prediction\nModule #1: 1 gate(s) (G0).\nML PREDICTION (GraphSAINT, not a circuit fact): every gate of this module is predicted Control Logic; a module is a connected group of gates with the same predicted class.\nML PREDICTION confidence: per-gate probabilities are not available for this circuit.\nML-BASED HINTS on these gates: F001 (singleton_subcircuit). These are model-based suspicions, not wiring faults.\nModule #1: netlist facts\ndeterministic\nSTRUCTURAL FACT: instance-name labels agree with the prediction on 1 of 1 gate(s) (labels come from instance names, a heuristic).\nSTRUCTURAL FACT: hierarchy blocks top 1; cells AND2 1.\nSTRUCTURAL FACT: neighbouring gates outside the module are predicted Multiplier (1 connection(s)).\nSTRUCTURAL FACT: no deterministic connectivity finding touches these gates, so any suspicion here is ML-only.\n1 tool call(s)",
+    "chips": [
+     "G0"
+    ],
+    "evidence": [
+     "ML prediction",
+     "deterministic"
+    ],
+    "trace": [
+     "\u2713 explain_region({\"gate_id\":null,\"module\":1}) auto"
+    ],
+    "error": null
+   },
+   "pill": "Context:\nModule #1\n(\"this\" / \"it\")",
+   "screenshot": "copilot_5_module.png"
+  },
+  "6_issue_fix": {
+   "reply": {
+    "text": "To fix the issue reported by finding F001, you need to connect the Input pin (CI) of the gate G23 (adder_1/intadd_0/U5) to a net. The suggested fix is to connect the Carry-out (CO) pin of the next gate G24 to the Input pin (CI) of G23. This connection is suggested because the CO pin of G24 drives the net \\adder_1/intadd_0/n5, which is not read by any other gate. This repair may be implemented by manually connecting these pins in the circuit design tool.\n 1 unverifiable reference removed\n1 tool call(s)",
+    "chips": [
+     "G23",
+     "G24",
+     "G23",
+     "G24"
+    ],
+    "evidence": [],
+    "trace": [
+     "\u2713 explain_finding({\"finding_id\":\"F001\"}) auto"
+    ],
+    "error": null
+   },
+   "ghost": [
+    {
+     "from_gate": 24,
+     "from_pin": "CO",
+     "to_gate": 23,
+     "to_pin": "CI",
+     "reason": "adder_1/intadd_0/U5.CI is unconnected, and adder_1/intadd_0/U6.CO drives \\adder_1/intadd_0/n5, which nothing reads.",
+     "confidence": 0.9
+    }
+   ],
+   "screenshot": "copilot_6_fix.png"
+  },
+  "7_graph": {
+   "nodes": 242,
+   "focus": 19,
+   "screenshot": "copilot_7_graph.png"
+  },
+  "8_upload": {
+   "metric": "N/A",
+   "starter_groups": [
+    "UNDERSTAND",
+    "DEBUG",
+    "TIMING",
+    "POWER",
+    "AREA",
+    "OPTIMIZE"
+   ],
+   "reply": {
+    "text": "AI explanation\nThis circuit performs an output selection logic, including a 4-bit adder and a 4x4 multiplier. It takes inputs `a[4]`, `b[4]`, and `operation`, where `operation` is a control signal that drives the select pin of 4 multiplexer cells. The circuit has three main blocks: `multiplier_1` with 65 gates (a multiplier), `top` with 8 gates (which acts as a selector), and `adder_1` with 6 gates (an adder). The data paths are as follows: `a` and `b` are connected to `adder_1`, which outputs `Result_add`, and then to `top`, which outputs the final `Result`. Alternatively, `a` and `b` are connected to `multiplier_1`, which outputs `Result_mul`, and then to `top`, which also outputs the final `Result`. The `operation` signal controls the selection between `Result_add` and `Result_mul`. There are no registers or clock cells in this circuit.\nEvidence computed from the circuit (not written by the AI):\nCircuit structure (from the netlist)\ndeterministic\nInferred function: Output select logic, 4-bit adder, 4x4 multiplier (confidence 0.55, source llm; derived from dependency cones and names, not verified design data).\nInputs: a[4], b[4], operation\nOutputs: Result[8]\nControl signals: operation (drives the select pin of 4 multiplexer cell(s); primary input outside the operand buses, fan-out 8)\nBlocks (hierarchy, by gate count): multiplier_1 65 gates (multiplier); top 8 gates; adder_1 6 gates (adder)\nDatapaths: a, b -> adder_1 (adder-like) -> Result_add -> top (select-like) -> output Result | a, b -> multiplier_1 (multiplier-like) -> Result_mul -> top (select-like) -> output Result\nBlock connections: adder_1 -> top via Result_add; multiplier_1 -> top via Result_mul\nPurely combinational (no registers or clock cells).\n1 tool call(s)",
+    "chips": [],
+    "evidence": [
+     "deterministic"
+    ],
+    "trace": [
+     "\u2713 circuit_overview({})"
+    ],
+    "error": null
+   },
+   "screenshot": "copilot_8_upload.png"
+  }
+ },
+ "console_errors": [],
+ "http_5xx": [],
+ "failures": []
+}

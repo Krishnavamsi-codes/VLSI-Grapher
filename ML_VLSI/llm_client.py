@@ -7,7 +7,7 @@ fake LLMClient) so nothing touches the network.
 Guarantees:
   * The API key is read from ML_VLSI/.env (python-dotenv) or the environment and is
     never printed, logged or returned. Every error message passes through _sanitize().
-  * 60 s timeout, one retry (with backoff) on 429 / 5xx / connection errors.
+  * 60 s timeout (180 s for a local server; OPENAI_TIMEOUT overrides), one retry (with backoff) on 429 / 5xx / connection errors.
   * Refusals, incomplete and failed responses raise LLMError with a clear message.
   * Token usage, estimated cost and latency are logged to stdout per request.
   * store=False: prompts and outputs are not stored by OpenAI; encrypted reasoning
@@ -42,6 +42,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ENV_PATH = os.path.join(HERE, '.env')
 
 DEFAULT_TIMEOUT_S = 60.0
+LOCAL_TIMEOUT_S = 180.0          # OPENAI_BASE_URL set; override either with OPENAI_TIMEOUT
 RETRY_BACKOFF_S = 2.0
 LOCAL_API_KEY = 'local-no-key'   # placeholder: local servers ignore the key, the SDK requires one
 LOCAL_TEMPERATURE = 0.1          # local path only; the OpenAI path sends no temperature
@@ -96,7 +97,13 @@ def load_config(env_path=ENV_PATH):
             prices[key] = float(get(env))
     base_url = get('OPENAI_BASE_URL').strip()
     reasoning = get('OPENAI_SEND_REASONING').strip().lower()
+    # a local model shares the GPU with whatever else runs on the machine, so it gets a longer default timeout
+    try:
+        timeout = float(get('OPENAI_TIMEOUT') or (LOCAL_TIMEOUT_S if base_url else DEFAULT_TIMEOUT_S))
+    except ValueError:
+        timeout = LOCAL_TIMEOUT_S if base_url else DEFAULT_TIMEOUT_S
     return LLMConfig(api_key=get('OPENAI_API_KEY').strip() or (LOCAL_API_KEY if base_url else ''), model=model,
+                     timeout=timeout,
                      effort_report=get('OPENAI_REASONING_EFFORT_REPORT', 'medium').strip(),
                      effort_chat=get('OPENAI_REASONING_EFFORT_CHAT', 'low').strip(),
                      prices=prices, base_url=base_url,
