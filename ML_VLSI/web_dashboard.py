@@ -96,51 +96,90 @@ HTML_CONTENT = """<!DOCTYPE html>
     </button>
   </header>
 
-  <!-- Main Grid Layout -->
-  <main class="max-w-[1600px] mx-auto px-6 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+  <!-- Main Container -->
+  <main class="max-w-[1600px] mx-auto px-6 py-5 space-y-5">
     
-    <!-- LEFT COLUMN: Circuit Input & Explanations (4 cols) -->
-    <div class="lg:col-span-4 space-y-5">
-      
-      <!-- 1. Circuit Selector & Upload Card -->
-      <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-white flex items-center tracking-wide">
-            <i class="fa-solid fa-cloud-arrow-up text-cyan-400 mr-2 text-base"></i> 1. Circuit Input & Netlist
-          </h2>
-          <span id="circuit-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">Synthesized 65nm</span>
+    <!-- TOP BANNER: Active Netlist Overview & Quick Stats -->
+    <div id="active-circuit-banner" class="glass-card rounded-2xl p-4 border border-indigo-500/30 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950/60 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3.5">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-inner">
+          <i class="fa-solid fa-file-code text-cyan-400"></i>
         </div>
-
-        <!-- Tab selection: Benchmark vs Upload -->
-        <div class="flex space-x-2 border-b border-slate-800/80 pb-2 text-xs">
-          <button id="tab-bench-btn" onclick="switchInputTab('benchmark')" class="text-cyan-400 font-semibold border-b-2 border-cyan-400 pb-1 px-1">Benchmark Library</button>
-          <button id="tab-upload-btn" onclick="switchInputTab('upload')" class="text-slate-400 hover:text-white pb-1 px-1 transition">Upload Custom .V</button>
-        </div>
-
-        <!-- Benchmark Dropdown -->
-        <div id="tab-benchmark-content" class="space-y-2">
-          <label class="text-[11px] text-slate-400 font-medium">Select Gate-Level Benchmark Netlist</label>
-          <select id="circuit-select" onchange="loadSelectedCircuit()" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-            <option value="">Loading circuits...</option>
-          </select>
-        </div>
-
-        <!-- Upload File Box -->
-        <div id="tab-upload-content" class="hidden space-y-2">
-          <label class="text-[11px] text-slate-400 font-medium">Upload Gate-Level Verilog File</label>
-          <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-slate-700/80 hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer bg-slate-950/50 transition">
-            <i class="fa-solid fa-file-arrow-up text-2xl text-indigo-400 mb-1"></i>
-            <div class="text-xs text-slate-300 font-medium">Click or Drag & Drop .v netlist</div>
-            <div class="text-[10px] text-slate-500">Supports Gate-Level Verilog (*.v)</div>
-            <input type="file" id="file-input" accept=".v,.verilog,.txt" onchange="handleFileUpload(event)" class="hidden">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Active Netlist</span>
+            <span id="active-source-tag" class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">Benchmark</span>
           </div>
+          <h2 id="active-circuit-name" class="text-sm font-bold text-white tracking-wide font-mono mt-0.5">Loading netlist...</h2>
         </div>
-
-        <!-- Run Inference CTA Button -->
-        <button onclick="runInference()" id="run-btn" class="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-cyan-500 hover:opacity-95 text-white font-semibold py-2.5 rounded-xl shadow-lg glow-indigo flex items-center justify-center space-x-2 text-xs transition active:scale-[0.99]">
-          <i class="fa-solid fa-bolt"></i> <span>Run GNN Reverse Engineering</span>
-        </button>
       </div>
+
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-950/90 border border-slate-700/80 rounded-xl px-4 py-2 flex items-center gap-5 text-xs font-mono shadow-inner">
+          <div><span class="text-slate-400 text-[10px] uppercase font-sans block">Gates</span><strong id="stat-gates-cnt" class="text-indigo-400 text-sm font-bold">0</strong></div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div><span class="text-slate-400 text-[10px] uppercase font-sans block">Nets</span><strong id="stat-nets-cnt" class="text-cyan-400 text-sm font-bold">0</strong></div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div><span class="text-slate-400 text-[10px] uppercase font-sans block">Inputs</span><strong id="stat-in-cnt" class="text-emerald-400 text-sm font-bold">0</strong></div>
+          <div class="h-6 w-px bg-slate-800"></div>
+          <div><span class="text-slate-400 text-[10px] uppercase font-sans block">Outputs</span><strong id="stat-out-cnt" class="text-purple-400 text-sm font-bold">0</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- LEFT COLUMN: Circuit Input & Explanations (4 cols) -->
+      <div class="lg:col-span-4 space-y-5">
+        
+        <!-- 1. Circuit Selector & Upload Card -->
+        <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-white flex items-center tracking-wide">
+              <i class="fa-solid fa-cloud-arrow-up text-cyan-400 mr-2 text-base"></i> 1. Circuit Input & Netlist
+            </h2>
+            <span id="circuit-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">Synthesized 65nm</span>
+          </div>
+
+          <!-- Tab selection: Benchmark vs Upload -->
+          <div class="flex space-x-2 border-b border-slate-800/80 pb-2 text-xs">
+            <button id="tab-bench-btn" onclick="switchInputTab('benchmark')" class="text-cyan-400 font-semibold border-b-2 border-cyan-400 pb-1 px-1">Benchmark Library</button>
+            <button id="tab-upload-btn" onclick="switchInputTab('upload')" class="text-slate-400 hover:text-white pb-1 px-1 transition">Upload Custom .V</button>
+          </div>
+
+          <!-- Benchmark Dropdown -->
+          <div id="tab-benchmark-content" class="space-y-2">
+            <label class="text-[11px] text-slate-400 font-medium">Select Gate-Level Benchmark Netlist</label>
+            <select id="circuit-select" onchange="loadSelectedCircuit()" class="w-full bg-slate-950/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="">Loading circuits...</option>
+            </select>
+          </div>
+
+          <!-- Upload File Box -->
+          <div id="tab-upload-content" class="hidden space-y-2">
+            <label class="text-[11px] text-slate-400 font-medium">Upload Gate-Level Verilog File</label>
+            <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-indigo-500/40 hover:border-indigo-400 rounded-xl p-4 text-center cursor-pointer bg-slate-950/60 transition group">
+              <div id="drop-zone-idle">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-indigo-400 group-hover:scale-110 transition-transform mb-1"></i>
+                <div class="text-xs text-slate-200 font-medium">Click or Drag & Drop custom .V netlist</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">Supports Gate-Level Verilog (*.v) & Assign statements</div>
+              </div>
+              <div id="drop-zone-active" class="hidden">
+                <i class="fa-solid fa-circle-check text-2xl text-emerald-400 mb-1"></i>
+                <div id="uploaded-filename" class="text-xs font-mono font-bold text-emerald-300">filename.v</div>
+                <div id="uploaded-details" class="text-[10px] text-slate-300 mt-0.5">Parsed 0 gates, 0 nets</div>
+                <span class="inline-block mt-2 text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-500/40">Click to change file</span>
+              </div>
+              <input type="file" id="file-input" accept=".v,.verilog,.txt" onchange="handleFileUpload(event)" class="hidden">
+            </div>
+          </div>
+
+          <!-- Run Inference CTA Button -->
+          <button onclick="runInference()" id="run-btn" class="w-full bg-gradient-to-r from-indigo-500 via-purple-600 to-cyan-500 hover:opacity-95 text-white font-semibold py-2.5 rounded-xl shadow-lg glow-indigo flex items-center justify-center space-x-2 text-xs transition active:scale-[0.99]">
+            <i class="fa-solid fa-bolt"></i> <span>Run GNN Reverse Engineering</span>
+          </button>
+        </div>
 
       <!-- 2. Model Performance & Accuracy Card -->
       <div class="glass-card rounded-2xl p-5 shadow-2xl space-y-3">
@@ -371,7 +410,51 @@ HTML_CONTENT = """<!DOCTYPE html>
       schematicView = { scale: 1, tx: 0, ty: 0 };
       schematicLayout = null;
       const badge = document.getElementById('circuit-badge');
-      badge.textContent = { upload: 'Uploaded netlist', demo: 'Demo fault (injected)' }[data.source] || 'Synthesized 65nm';
+      if (badge) badge.textContent = { upload: 'Uploaded netlist', demo: 'Demo fault (injected)' }[data.source] || 'Synthesized 65nm';
+      
+      // Update top active circuit banner & stats
+      const bannerName = document.getElementById('active-circuit-name');
+      const tag = document.getElementById('active-source-tag');
+      const displayName = data.display_name || (currentSource.circuit_name ? currentSource.circuit_name.replace('.v','') : 'Custom Uploaded Circuit');
+      
+      if (bannerName) bannerName.textContent = displayName;
+      if (tag) {
+        if (data.source === 'upload') {
+          tag.textContent = 'Custom Verilog Upload';
+          tag.className = 'text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold';
+        } else if (data.source === 'demo') {
+          tag.textContent = 'Demo Fault (Injected)';
+          tag.className = 'text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold';
+        } else {
+          tag.textContent = 'Synthesized 65nm Benchmark';
+          tag.className = 'text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30';
+        }
+      }
+
+      const nGates = data.nodes ? data.nodes.length : 0;
+      const nNets = data.edges ? data.edges.length : 0;
+      const nInputs = data.inputs ? data.inputs.length : 0;
+      const nOutputs = data.outputs ? data.outputs.length : 0;
+
+      if (document.getElementById('stat-gates-cnt')) document.getElementById('stat-gates-cnt').textContent = nGates;
+      if (document.getElementById('stat-nets-cnt')) document.getElementById('stat-nets-cnt').textContent = nNets;
+      if (document.getElementById('stat-in-cnt')) document.getElementById('stat-in-cnt').textContent = nInputs;
+      if (document.getElementById('stat-out-cnt')) document.getElementById('stat-out-cnt').textContent = nOutputs;
+
+      // Update upload dropzone state
+      if (data.source === 'upload' || currentSource.upload_id) {
+        const idle = document.getElementById('drop-zone-idle');
+        const active = document.getElementById('drop-zone-active');
+        const filename = document.getElementById('uploaded-filename');
+        const details = document.getElementById('uploaded-details');
+        if (idle && active) {
+          idle.classList.add('hidden');
+          active.classList.remove('hidden');
+        }
+        if (filename) filename.textContent = data.display_name || 'Uploaded Netlist';
+        if (details) details.textContent = `Parsed ${nGates} gate(s), ${nNets} net connection(s), ${nInputs} in / ${nOutputs} out`;
+      }
+
       renderCircuitSchematic();
       // vis-network is built lazily: a 12k-node physics layout would block the page in schematic view
       if (activeVisualView === 'graph') renderGraph(currentCircuitData);

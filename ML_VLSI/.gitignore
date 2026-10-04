@@ -6,3 +6,5 @@ uploads/
 .pytest_cache/
 .venv/
 verification/*.log
+server.log
+server.err

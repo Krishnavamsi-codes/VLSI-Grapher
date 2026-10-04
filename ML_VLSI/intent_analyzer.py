@@ -287,24 +287,37 @@ def deterministic_intent(evidence):
                 dataflow.append({'from_block': by_bus[bus], 'to_block': b['name'], 'via_bus': bus})
 
     obfuscated = evidence['names_look_obfuscated']
+    cells = evidence.get('cell_histogram', {})
+    num_gates = evidence.get('circuit', {}).get('num_gates', 0)
+    primary_in = evidence.get('circuit', {}).get('primary_input_bits', 0)
+    primary_out = evidence.get('circuit', {}).get('primary_output_bits', 0)
+
     if blocks:
         conf = 0.55 * (0.6 if obfuscated else 1.0)
+        fn = ', '.join(dict.fromkeys(phrases))
+        summary = f'This looks like {fn}.'
+    elif cells:
+        top_cells = [f"{cnt} {cell.upper()}" for cell, cnt in cells.items()][:4]
+        cell_str = ', '.join(top_cells)
+        fn = f'Logic Gate Circuit ({cell_str})'
+        summary = f'This is a combinational logic circuit composed of {cell_str} gate(s) operating on {primary_in} input(s) and driving {primary_out} output(s).'
+        conf = 0.75
     else:
         conf = 0.1
-    fn = ', '.join(dict.fromkeys(phrases)) if phrases else 'unknown combinational logic'
+        fn = 'unknown combinational logic'
+        summary = 'The structure does not match a known arithmetic pattern, so its purpose is unclear.'
+
     feeding = [f'{d["from_block"]} feeds {d["to_block"]} via {d["via_bus"]}' for d in dataflow]
     return {
         'intended_function': fn[:1].upper() + fn[1:],
-        'summary_for_layman': (f'This looks like {fn}.' if blocks else
-                               'The structure does not match a known arithmetic pattern, so its purpose is unclear.')
-                              + (' Names give no hints, so this is a structural guess.' if obfuscated else ''),
+        'summary_for_layman': summary + (' Names give no hints, so this is a structural guess.' if obfuscated and blocks else ''),
         'blocks': blocks,
         'dataflow': dataflow,
         'expected_connections': templates,
         'unchecked_rules': [],
         'confidence': round(conf, 2),
-        'reasoning': ('Derived from dependency-cone signatures only (no language model). '
-                      + ('; '.join(b['evidence'] for b in blocks) + '. ' if blocks else '')
+        'reasoning': ('Derived from cell histogram and topological analysis. '
+                      + ('; '.join(b['evidence'] for b in blocks) + '. ' if blocks else f'Cell breakdown: {cells}. ')
                       + ('; '.join(feeding) + '.' if feeding else '')).strip(),
         'source': 'deterministic',
     }
@@ -357,14 +370,13 @@ extracted from a flattened gate-level netlist (the "circuit under analysis"). In
 Rules:
 - Use ONLY the evidence given. Bus, prefix and block names you output must appear in the evidence exactly.
 - Cite buses as [B:<bus>], nets as [N:<net>], gates as [G<id>] in free text.
+- Primary cell types (`cell_histogram`: NAND, NOR, AND, OR, XOR, INV, etc.) and dependency-cone signatures are primary facts.
+- Model predictions (GraphSAINT/baseline GCN) are low-confidence suspicions, NOT facts. If `cell_histogram` contains simple logic gates (such as NAND, NOR, AND, OR, XOR), explain it as a combinational logic switch / gate circuit, and NEVER misclassify basic logic gates as complex arithmetic blocks (like a subtractor or multiplier) based solely on baseline GCN predictions.
 - Buses may be MSB-first: respect the stated index_order.
-- dependency-cone signatures are the strongest evidence; hierarchy names are hints only (labels in this dataset
-  are derived from instance names). If names give no hints or evidence is weak, confidence must be <= 0.4 and you
-  must say so. Never exceed 0.95.
+- If names give no hints or evidence is weak, confidence must be <= 0.4 and you must say so. Never exceed 0.95.
 - expected_connections: choose templates that the code can check. params: out_bus = the result bus, in_buses =
   operand buses, block_prefix = hierarchy prefix (carry_chain only), minuend/subtrahend (subtractor_inverted only).
   Unused params must be null / empty. Put anything else you expect into unchecked_rules.
-- Model predictions (GraphSAINT/baseline) are suspicions, not facts.
 - summary_for_layman: 1-2 plain sentences, no jargon.
 """
 

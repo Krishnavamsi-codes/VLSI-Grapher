@@ -34,7 +34,10 @@ OUTPUT_PIN_NAMES = frozenset({'Y', 'S', 'CO', 'Q', 'QN', 'Z', 'ZN'})
 _CELL_LIBRARY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cell_library.json')
 _cell_library = None
 
-_GATE_RE = re.compile(r'(\w+)\s+([\w\\/]+)\s*\((.*?)\);', re.DOTALL)
+# Standard Verilog primitives
+VERILOG_PRIMITIVES = {'nand', 'nor', 'and', 'or', 'xor', 'xnor', 'not', 'inv', 'buf'}
+
+_GATE_RE = re.compile(r'(\w+)\s+(?:([\w\\/]+)\s*)?\((.*?)\);', re.DOTALL)
 _PIN_RE = re.compile(r'\.(\w+)\s*\(\s*([^)]+)\s*\)')
 _EMPTY_PIN_RE = re.compile(r'\.(\w+)\s*\(\s*\)')
 _DECL_RE = re.compile(r'(?<![\w\\$])(input|output|inout|wire)\b\s*(?:\[\s*(\d+)\s*:\s*(\d+)\s*\])?\s*([^;]*);')
@@ -59,52 +62,128 @@ def parse_verilog_netlist(file_path):
     return parse_verilog_text(content)
 
 
+def _parse_port_map(cell_type, port_map_str):
+    pin_connections = {}
+    if '.' in port_map_str:
+        for pm in _PIN_RE.finditer(port_map_str):
+            pin = pm.group(1).strip()
+            net = pm.group(2).strip()
+            pin_connections[pin] = net
+    else:
+        # Positional arguments: e.g. (y, a, b) or (out, in1, in2)
+        nets = [x.strip() for x in port_map_str.split(',') if x.strip()]
+        if nets:
+            # Position 0 is output Y (standard Verilog primitive convention)
+            pin_connections['Y'] = nets[0]
+            for i, net in enumerate(nets[1:]):
+                pin_name = chr(65 + i)  # A, B, C...
+                pin_connections[pin_name] = net
+    return pin_connections
+
+
+def _parse_assign_statement(target_net, expr_str, assign_idx):
+    target = target_net.strip()
+    expr = expr_str.strip()
+    cell_type = 'buf'
+    inputs = []
+    
+    # Check NAND: ~(a & b) or !(a & b)
+    if ('&' in expr and (expr.startswith('~') or expr.startswith('!'))):
+        cell_type = 'nand'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    # Check NOR: ~(a | b) or !(a | b)
+    elif ('|' in expr and (expr.startswith('~') or expr.startswith('!'))):
+        cell_type = 'nor'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    # Check AND: a & b
+    elif '&' in expr:
+        cell_type = 'and'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    # Check OR: a | b
+    elif '|' in expr:
+        cell_type = 'or'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    # Check XOR: a ^ b
+    elif '^' in expr:
+        cell_type = 'xor'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    # Check NOT: ~a or !a
+    elif expr.startswith('~') or expr.startswith('!'):
+        cell_type = 'inv'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+    else:
+        cell_type = 'buf'
+        inputs = re.findall(r'[A-Za-z_][\w$]*', expr)
+        
+    pin_connections = {'Y': target}
+    for i, inp in enumerate(inputs):
+        if inp != target:
+            pin_connections[chr(65 + i)] = inp
+            
+    return {
+        'cell_type': cell_type,
+        'inst_name': f'g_assign_{assign_idx}',
+        'pins': pin_connections,
+        'ground_truth': 2
+    }
+
+
 def parse_verilog_text(content):
     # Strip comments
     content = _strip_comments(content)
 
     # Extract module name
-    module_match = re.search(r'module\s+(\w+)\s*\((.*?)\);', content, re.DOTALL)
+    module_match = re.search(r'module\s+(\w+)\s*(?:\((.*?)\))?;', content, re.DOTALL)
     if not module_match:
         return None
     module_name = module_match.group(1)
+    header_ports = module_match.group(2) or ''
 
-    # Extract inputs and outputs
+    # Extract inputs and outputs (from body and header)
     inputs = []
     outputs = []
-    for inp in re.finditer(r'input\s*(?:\[\d+:\d+\])?\s*([^;]+);', content):
-        names = [x.strip() for x in inp.group(1).split(',')]
-        inputs.extend(names)
-    for out in re.finditer(r'output\s*(?:\[\d+:\d+\])?\s*([^;]+);', content):
-        names = [x.strip() for x in out.group(1).split(',')]
-        outputs.extend(names)
+    
+    # Header & body searches
+    full_search_text = header_ports + '\n;\n' + content
+    for inp in re.finditer(r'input\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
+        for name in inp.group(1).split(','):
+            n = name.strip()
+            if n and n not in inputs and n not in ['reg', 'wire', 'logic']:
+                inputs.append(n)
+                
+    for out in re.finditer(r'output\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
+        for name in out.group(1).split(','):
+            n = name.strip()
+            if n and n not in outputs and n not in ['reg', 'wire', 'logic']:
+                outputs.append(n)
 
     # Extract gate instances
     gates = []
+    auto_inst_cnt = 0
 
     for match in _GATE_RE.finditer(content):
         cell_type = match.group(1)
-        inst_name = match.group(2).strip()
+        inst_name = (match.group(2) or '').strip()
         port_map_str = match.group(3)
         
-        if cell_type in ['module', 'input', 'output', 'wire', 'reg']:
+        if cell_type in ['module', 'input', 'output', 'wire', 'reg', 'assign', 'endmodule']:
             continue
             
-        pin_connections = {}
-        for pm in _PIN_RE.finditer(port_map_str):
-            pin = pm.group(1).strip()
-            net = pm.group(2).strip()
-            pin_connections[pin] = net
+        if not inst_name:
+            auto_inst_cnt += 1
+            inst_name = f"g_{cell_type}_{auto_inst_cnt}"
+
+        pin_connections = _parse_port_map(cell_type, port_map_str)
             
         ground_truth = 2 # Default: Control logic
-        inst_lower = inst_name.lower()
-        if 'adder' in inst_lower or 'add_' in inst_lower:
+        inst_lower = inst_name.lower() + ' ' + cell_type.lower()
+        if 'adder' in inst_lower or 'add_' in inst_lower or 'add' in inst_lower:
             ground_truth = 0
-        elif 'multiplier' in inst_lower or 'mul_' in inst_lower:
+        elif 'multiplier' in inst_lower or 'mul_' in inst_lower or 'mult' in inst_lower:
             ground_truth = 1
-        elif 'subtractor' in inst_lower or 'sub_' in inst_lower:
+        elif 'subtractor' in inst_lower or 'sub_' in inst_lower or 'sub' in inst_lower:
             ground_truth = 3
-        elif 'comparator' in inst_lower or 'comp_' in inst_lower:
+        elif 'comparator' in inst_lower or 'comp_' in inst_lower or 'cmp' in inst_lower:
             ground_truth = 4
             
         gates.append({
@@ -114,12 +193,23 @@ def parse_verilog_text(content):
             'ground_truth': ground_truth
         })
 
+    # Extract assign statements if any
+    assign_cnt = 0
+    for match in _ASSIGN_RE.finditer(content):
+        assign_cnt += 1
+        target_net = match.group(1)
+        expr_str = match.group(2)
+        gate_obj = _parse_assign_statement(target_net, expr_str, assign_cnt)
+        if gate_obj:
+            gates.append(gate_obj)
+
     return {
         'module_name': module_name,
         'inputs': inputs,
         'outputs': outputs,
         'gates': gates
     }
+
 
 def build_circuit_graph(parsed_netlist):
     gates = parsed_netlist['gates']
@@ -129,14 +219,15 @@ def build_circuit_graph(parsed_netlist):
 
     net_drivers = {}
     net_readers = {}
-    output_pin_names = {'Y', 'S', 'CO', 'Q', 'QN', 'Z', 'ZN'}
+    output_pin_names = {'Y', 'S', 'CO', 'Q', 'QN', 'Z', 'ZN', 'OUT', 'Y_N', 'SO', 'C_OUT'}
     
     for idx, gate in enumerate(gates):
         for pin, net in gate['pins'].items():
-            if pin.upper() in output_pin_names:
+            if pin.upper() in output_pin_names or pin_direction(gate['cell_type'], pin) == 'output':
                 net_drivers.setdefault(net, []).append(idx)
             else:
                 net_readers.setdefault(net, []).append(idx)
+
 
     edges = set()
     in_degrees = np.zeros(num_nodes)
@@ -275,8 +366,12 @@ def build_circuit_model(path=None, text=None):
     if len(re.findall(r'(?<![\w\\$])module\s+\w+', content)) > 1:
         warnings.append('Multiple modules found; the file is modeled as one flat netlist.')
 
-    nodes, edges, features, labels = build_circuit_graph(parsed)
-    gates = parsed['gates']
+    # Assign statements are modeled separately below as aliases or structural
+    # warnings.  Do not let parse_verilog_text's compatibility-only synthetic
+    # assign gates appear as real cells in the net-level model.
+    gates = [gate for gate in parsed['gates'] if not gate['inst_name'].startswith('g_assign_')]
+    graph_parsed = dict(parsed, gates=gates)
+    nodes, edges, features, labels = build_circuit_graph(graph_parsed)
     library = load_cell_library()
 
     # --- Port / wire declarations (bit-expanded) ---------------------------
@@ -296,6 +391,14 @@ def build_circuit_model(path=None, text=None):
                 primary_inputs.extend(bits)
             if kind in ('output', 'inout'):
                 primary_outputs.extend(bits)
+
+    # Ensure header inputs and outputs are included if not captured by _DECL_RE
+    for inp in parsed.get('inputs', []):
+        if inp not in primary_inputs and inp not in buses:
+            primary_inputs.append(inp)
+    for out in parsed.get('outputs', []):
+        if out not in primary_outputs and out not in buses:
+            primary_outputs.append(out)
 
     # --- assign statements: simple ones are aliases -------------------------
     uf = _UnionFind()
@@ -331,8 +434,12 @@ def build_circuit_model(path=None, text=None):
     # --- Gate pins ---------------------------------------------------------
     gate_pins, gate_dirs, hier_prefix, missing_pins = [], [], [], []
     unknown_cells = set()
+    # `parse_verilog_text()` appends synthetic gates for `assign` statements,
+    # but those do not have an instance port map. Keep only actual instances
+    # here and guard the synthetic gates below instead of indexing the two
+    # collections as if they were identical.
     gate_matches = [m for m in _GATE_RE.finditer(content)
-                    if m.group(1) not in ('module', 'input', 'output', 'wire', 'reg')]
+                    if m.group(1) not in ('module', 'input', 'output', 'wire', 'reg', 'assign', 'endmodule')]
     for gid, gate in enumerate(gates):
         cell = gate['cell_type']
         pins, dirs = {}, {}
@@ -350,7 +457,8 @@ def build_circuit_model(path=None, text=None):
         inst = gate['inst_name'].lstrip('\\').strip()
         hier_prefix.append(inst.rsplit('/', 1)[0] if '/' in inst else '')
 
-        explicit_empty = {pm.group(1) for pm in _EMPTY_PIN_RE.finditer(gate_matches[gid].group(3))}
+        port_map = gate_matches[gid].group(3) if gid < len(gate_matches) else ''
+        explicit_empty = {pm.group(1) for pm in _EMPTY_PIN_RE.finditer(port_map)}
         spec = library.get(cell)
         if spec is None:
             unknown_cells.add(cell)
@@ -374,7 +482,7 @@ def build_circuit_model(path=None, text=None):
 
     return {
         'module_name': parsed['module_name'],
-        'parsed': parsed,
+        'parsed': graph_parsed,
         'nodes': nodes, 'edges': edges, 'features': features, 'labels': labels,
         'gates': gates,
         'num_gates': len(gates),

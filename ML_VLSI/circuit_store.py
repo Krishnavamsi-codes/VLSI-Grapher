@@ -16,10 +16,12 @@ import os
 import re
 import threading
 import uuid
+import zipfile
 from collections import namedtuple
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(HERE, 'GNN-RE', 'Netlist_to_graph', 'Circuits_datasets', 'Interconnected-Modules')
+DATASET_ARCHIVE = os.path.join(HERE, 'GNN-RE', 'Netlist_to_graph.zip')
 DEMO_DIR = os.path.join(HERE, 'demo_faults')
 DEMO_MANIFEST = os.path.join(DEMO_DIR, 'manifest.json')
 UPLOAD_DIR = os.path.join(HERE, 'uploads')
@@ -28,6 +30,7 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_STORED_UPLOADS = 100
 _UPLOAD_ID_RE = re.compile(r'^[0-9a-f]{32}$')
 _upload_lock = threading.Lock()
+_dataset_lock = threading.Lock()
 
 # kind: 'benchmark' | 'demo' | 'upload'
 # key:  stable identifier used for caching ('benchmark:<file>', 'upload:<id>', ...)
@@ -41,6 +44,25 @@ class CircuitRefError(ValueError):
         self.status = status
         self.error_code = error_code
         self.message = message
+
+
+def _ensure_benchmark_dataset():
+    """Unpack the upstream benchmark archive when a fresh submodule has no data."""
+    if os.path.isdir(DATASET_DIR):
+        return
+    with _dataset_lock:
+        if os.path.isdir(DATASET_DIR):
+            return
+        if not os.path.isfile(DATASET_ARCHIVE):
+            return
+        extract_root = os.path.join(HERE, 'GNN-RE')
+        root_real = os.path.realpath(extract_root)
+        with zipfile.ZipFile(DATASET_ARCHIVE) as archive:
+            for member in archive.infolist():
+                target = os.path.realpath(os.path.join(extract_root, member.filename))
+                if os.path.commonpath([root_real, target]) != root_real:
+                    raise CircuitRefError(500, 'INVALID_DATASET_ARCHIVE', 'Benchmark archive contains an unsafe path.')
+            archive.extractall(extract_root)
 
 
 def is_inside(base, rel):
@@ -74,6 +96,7 @@ def _inside(base, name):
 
 
 def list_benchmarks():
+    _ensure_benchmark_dataset()
     return sorted(os.path.basename(f) for f in glob.glob(os.path.join(DATASET_DIR, '*.v')))
 
 
