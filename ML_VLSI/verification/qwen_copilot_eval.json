@@ -1,0 +1,1448 @@
+{
+ "questions": [
+  {
+   "question": "What does this circuit do?",
+   "focus": null,
+   "status": 200,
+   "seconds": 104.0,
+   "reply": "The circuit performs the following functions:\n\n- **Inputs:** a[8], b[8], operation\n- **Outputs:** Result[16]\n- **Control signals:** operation (drives the select pin of 8 multiplexer cells, which is an external input)\n- **Blocks:** \n  - **Multiplier_1:** 213 gates (multiplier)\n  - **Top:** 16 gates (select-like)\n  - **Adder_1:** 10 gates (adder)\n\nThe circuit has two datapaths:\n1. a, b -> adder_1 (adder-like) -> Result_add -> top (select-like) -> output Result\n2. a, b -> multiplier_1 (multiplier-like) -> Result_mul -> top (select-like) -> output Result\n\nThe circuit is purely combinational, with no registers or clock cells.",
+   "tools": [
+    [
+     "circuit_overview",
+     {}
+    ]
+   ],
+   "evidence": [
+    "deterministic: Circuit structure (from the netlist)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 10781,
+    "output_tokens": 400,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    66.7,
+    73.7,
+    70.7,
+    69.4,
+    65.6,
+    63.0,
+    68.8,
+    64.5,
+    94.3,
+    25.1,
+    23.1,
+    25.8,
+    52.8,
+    65.4,
+    66.5,
+    64.5,
+    70.0,
+    67.2,
+    70.0,
+    66.9,
+    65.2,
+    72.7,
+    75.1,
+    69.8,
+    85.9,
+    33.6,
+    25.6,
+    22.9,
+    49.7,
+    64.7,
+    65.0,
+    67.1,
+    74.9,
+    64.9,
+    66.7,
+    68.8,
+    63.8,
+    74.4,
+    65.3,
+    68.8,
+    68.4,
+    65.9,
+    68.6,
+    74.5,
+    77.0,
+    26.1,
+    21.0,
+    25.9,
+    68.5,
+    67.7,
+    69.2,
+    67.0,
+    73.3,
+    67.9,
+    66.5,
+    64.5,
+    68.1,
+    66.7,
+    89.0,
+    37.4,
+    25.8,
+    24.2,
+    58.7,
+    76.3,
+    72.0,
+    67.3,
+    64.2,
+    65.4,
+    68.1,
+    62.8,
+    65.3,
+    75.6
+   ],
+   "context_fraction": 0.658,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "mentions adder+multiplier": true
+   }
+  },
+  {
+   "question": "What are the control signals?",
+   "focus": null,
+   "status": 200,
+   "seconds": 43.8,
+   "reply": "The control signal for this circuit is the `operation` signal. It has a fan-out of 16 and drives the select pin of 8 multiplexer cells, which are primary inputs outside the operand buses. This signal is inferred to be the control signal based on the structure and naming conventions of the circuit.",
+   "tools": [
+    [
+     "circuit_overview",
+     {}
+    ]
+   ],
+   "evidence": [
+    "deterministic: Circuit structure (from the netlist)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7085,
+    "output_tokens": 160,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    86.4,
+    46.5,
+    28.0,
+    23.5,
+    26.8,
+    76.2,
+    60.1,
+    66.1,
+    66.8,
+    65.4,
+    64.8,
+    67.1,
+    71.0,
+    80.6,
+    70.8,
+    72.0,
+    68.0,
+    87.8,
+    30.2,
+    24.0,
+    26.0,
+    56.6,
+    76.9,
+    69.7,
+    67.1,
+    65.7,
+    64.1,
+    65.9,
+    66.4,
+    66.5,
+    75.7
+   ],
+   "context_fraction": 0.432,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "names operation": true,
+    "overview tool": true
+   }
+  },
+  {
+   "question": "Explain the main blocks",
+   "focus": null,
+   "status": 200,
+   "seconds": 36.5,
+   "reply": "The main blocks in the circuit are:\n\n- **multiplier_1**: A 213-gate block inferred to be a multiplier. It processes inputs `a` and `b` and produces `Result_mul`.\n- **adder_1**: A 10-gate block inferred to be an adder. It processes inputs `a` and `b` and produces `Result_add`.\n- **top**: A 16-gate block inferred to be a selector, which combines the results from `adder_1` and `multiplier_1`.\n\nThe `operation` signal controls the selection between `Result_add` and `Result_mul`. The circuit is purely combinational, with no registers or clock cells.",
+   "tools": [
+    [
+     "circuit_overview",
+     {}
+    ]
+   ],
+   "evidence": [
+    "deterministic: Circuit structure (from the netlist)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7167,
+    "output_tokens": 328,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    79.1,
+    66.4,
+    72.6,
+    71.8,
+    71.6,
+    73.6,
+    70.5,
+    75.9,
+    14.8,
+    13.7,
+    17.8,
+    15.1,
+    20.1,
+    24.9,
+    31.1,
+    30.6,
+    23.8,
+    24.1,
+    19.6,
+    28.6,
+    21.5,
+    27.8,
+    20.5,
+    17.4,
+    32.4,
+    29.4,
+    19.2
+   ],
+   "context_fraction": 0.437,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "names multiplier_1": true
+   }
+  },
+  {
+   "question": "What is G23?",
+   "focus": null,
+   "status": 200,
+   "seconds": 14.4,
+   "reply": "Gate [G23] is an instance of the cell type ADDF_X1M_A9TH, named \"U5\" within the block \"adder_1/intadd_0\". It is part of the \"adder_1\" block. \n\nIts inputs are:\n- Pin A, driven by primary input b[4], connected to net b[4].\n- Pin B, driven by primary input a[4], connected to net a[4].\n\nIts outputs are:\n- Pin CO, connected to net \\adder_1/intadd_0/n4, read by [G22].\n- Pin S, connected to net Result_add[12], read by [G5].\n\n[G23] has a fan-in gate ([G24]) and a fan-out gate ([G5] and [G22]). The GraphSAINT model predicts this gate as a \"Multiplier\", which differs from the instance name \"Adder\". This prediction is based on the model and not a verified design data. There are no findings associated with this gate.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 23
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "N:\\\nadder_1/intadd_0/n4"
+   ],
+   "usage": {
+    "input_tokens": 7368,
+    "output_tokens": 351,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    18.9,
+    28.4,
+    27.3,
+    33.9,
+    38.7,
+    27.4,
+    20.2,
+    20.0,
+    19.5,
+    24.3,
+    23.2
+   ],
+   "context_fraction": 0.45,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "get_gate 23": true
+   }
+  },
+  {
+   "question": "What drives it?",
+   "focus": null,
+   "status": 200,
+   "seconds": 11.6,
+   "reply": "Gate [G23] is driven by the primary inputs `a[4]` and `b[4]`. Specifically, the primary input `a[4]` drives the input pin `B` of [G23], and the primary input `b[4]` drives the input pin `A` of [G23]. The output pin `S` of [G23] is read by gates [G5] and [G22]. The GraphSAINT model predicts this gate as a \"Multiplier\", which differs from the instance name \"Adder\". There are no findings associated with this gate.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 23
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7750,
+    "output_tokens": 262,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    34.6,
+    31.9,
+    20.4,
+    21.2,
+    24.7,
+    26.5,
+    18.4,
+    16.1,
+    21.3
+   ],
+   "context_fraction": 0.473,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "G24 drives G23": false,
+    "subject kept": true
+   }
+  },
+  {
+   "question": "Is that on a critical path?",
+   "focus": null,
+   "status": 200,
+   "seconds": 10.0,
+   "reply": "Gate [G23] is not on a critical path. The longest path through [G23] has 9 levels, which is 10 levels shorter than the circuit's maximum depth of 19 levels. The drive strength is indicated by the cell name suffix \"X1\". There are no timing, power, or area data available for this circuit, only structural indicators such as gate levels and fan-out.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": 23
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: G23 timing indicators"
+   ],
+   "dropped": [
+    "claim: G23 drives 2 pins (G5 and G22) and has a fan-in gate (G24)",
+    "claim: wrong depth \"4 gate levels\" (the longest path has 19 levels)"
+   ],
+   "usage": {
+    "input_tokens": 7773,
+    "output_tokens": 218,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    31.1,
+    25.9,
+    17.1,
+    16.3,
+    42.5,
+    17.9,
+    14.6,
+    27.5
+   ],
+   "context_fraction": 0.474,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "timing tool on G23": true,
+    "says not on longest path": true
+   }
+  },
+  {
+   "question": "How could I optimize it?",
+   "focus": null,
+   "status": 200,
+   "seconds": 18.3,
+   "reply": "Gate [G23] is part of a ripple carry chain in the \"adder_1\" block, consisting of 6 full/half-adder cells ([G25], [G24], [G23], [G22], [G21], [G20]). The GraphSAINT model suggests investigating a potential optimization target:\n\n- **O2**: Target: ripple carry chain in adder_1 (6 adder cells). Reason: A ripple-carry chain involves each stage waiting for the previous carry, which can be optimized with a carry-lookahead or parallel-prefix structure. This could reduce the carry delay, but at the cost of increased area. The potential impact is unmeasured. Confidence: medium. Type: structural heuristic.\n\nThe optimization target O2 is recommended for investigation. Gate [G23] itself is not on a critical path, as the longest path through it is 9 levels, which is 10 levels shorter than the circuit's maximum of 19 levels. Gate [G23] has a fan-out of 2 gates ([G5], [G22]) and a fan-in of 1 gate ([G24]). The drive strength is indicated by the cell name suffix \"X1\".",
+   "tools": [
+    [
+     "optimization_suggestions",
+     {
+      "category": null,
+      "gate_id": 23
+     }
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: O2 [performance] ripple carry chain in adder_1 (6 adder cells)"
+   ],
+   "dropped": [
+    "claim: wrong depth \"4 levels\" (the longest path has 19 levels)"
+   ],
+   "usage": {
+    "input_tokens": 8109,
+    "output_tokens": 437,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    25.5,
+    15.5,
+    23.7,
+    18.9,
+    19.9,
+    21.5,
+    15.9,
+    15.0,
+    13.5,
+    19.6,
+    16.3,
+    13.6,
+    16.3,
+    16.1,
+    25.8
+   ],
+   "context_fraction": 0.495,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "optimization tool on G23": true
+   }
+  },
+  {
+   "question": "Show the longest paths",
+   "focus": null,
+   "status": 200,
+   "seconds": 36.2,
+   "reply": "The circuit has been analyzed for longest paths, and the following paths have been identified:\n\n- **Path 1** (19 levels): From input `a[7]` to output `Result[0]` through the blocks `multiplier_1` and `top`. This path includes gates `[G132]`, `[G156]`, `[G48]`, `[G51]`, `[G208]`, `[G104]`, `[G105]`, `[G224]`, `[G121]`, `[G101]`, `[G123]`, `[G109]`, `[G34]`, `[G124]`, `[G125]`, and `[G94]`.\n- **Path 2** (18 levels): From input `a[7]` to output `Result[1]` through the blocks `multiplier_1` and `top`. This path includes gates `[G132]`, `[G156]`, `[G48]`, `[G51]`, `[G208]`, `[G104]`, `[G105]`, `[G224]`, `[G121]`, `[G101]`, `[G123]`, `[G109]`, `[G34]`, `[G124]`, `[G125]`, and `[G94]`.\n- **Path 3** (16 levels): From input `a[7]` to output `Result[4]` through the blocks `multiplier_1` and `top`. This path includes gates `[G132]`, `[G156]`, `[G48]`, `[G51]`, `[G208]`, `[G104]`, `[G105]`, `[G224]`, `[G121]`, `[G101]`, `[G123]`, `[G109]`, `[G236]`, `[G79]`, `[G80]`, and `[G13]`.\n\nThese paths are the longest in terms of the number of gates they traverse, indicating that the circuit's performance could be improved by reducing the depth of these paths.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Longest path: 19 gate levels",
+    "deterministic: Ripple carry chain: 6 adder cells (adder_1)",
+    "deterministic: Highest fan-out nets"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 8559,
+    "output_tokens": 911,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    25.3,
+    14.4,
+    23.0,
+    27.5,
+    16.1,
+    19.2,
+    17.8,
+    16.2,
+    18.5,
+    15.9,
+    13.3,
+    27.4,
+    20.4,
+    23.3,
+    23.9,
+    23.6,
+    17.8,
+    20.8,
+    24.1,
+    21.5,
+    24.1,
+    23.6,
+    19.6,
+    18.6,
+    21.1,
+    24.7,
+    22.9,
+    23.1
+   ],
+   "context_fraction": 0.522,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "timing tool": true,
+    "evidence card with longest path": true,
+    "path gates highlighted": true
+   }
+  },
+  {
+   "question": "Which gates are timing bottlenecks?",
+   "focus": null,
+   "status": 200,
+   "seconds": 20.0,
+   "reply": "The circuit has no delay data, so no specific timing bottlenecks are identified. However, the longest paths are found in the multiplier_1 and top blocks, with the following paths:\n\n- Path 1 (19 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G34] -> [G124] -> [G125] -> [G94] -> ...; from a[7]; to output Result[0]; blocks multiplier_1, top\n- Path 2 (18 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G34] -> [G124] -> [G125] -> [G94] -> ...; from a[7]; to output Result[1]; blocks multiplier_1, top\n- Path 3 (16 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G236] -> [G79] -> [G80] -> [G13]; from a[7]; to output Result[4]; blocks multiplier_1, top\n\nThe ripple carry chains are in the adder_1 and multiplier_1 blocks, with 6 and 5 adder cells respectively. The highest fan-out nets are driven by primary inputs and inverters. No specific gates are identified as timing bottlenecks due to the lack of delay data.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Longest path: 19 gate levels",
+    "deterministic: Ripple carry chain: 6 adder cells (adder_1)",
+    "deterministic: Highest fan-out nets"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 8518,
+    "output_tokens": 498,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    37.0,
+    18.1,
+    26.9,
+    19.9,
+    17.2,
+    29.8,
+    24.6,
+    27.5,
+    27.1,
+    18.9,
+    18.5,
+    21.3,
+    23.4,
+    26.6
+   ],
+   "context_fraction": 0.52,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "timing tool": true
+   }
+  },
+  {
+   "question": "Which signals have high fan-out?",
+   "focus": null,
+   "status": 200,
+   "seconds": 11.2,
+   "reply": "The signals with high fan-out are the primary input `operation` which loads 16 gates, and the signals `\\multiplier_1/n115`, `\\multiplier_1/n116`, `\\multiplier_1/n126`, and `\\multiplier_1/n127`, each with 8 loads driven by gates `[G128]`, `[G131]`, `[G140]`, and `[G135]` respectively.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Longest path: 19 gate levels",
+    "deterministic: Ripple carry chain: 6 adder cells (adder_1)",
+    "deterministic: Highest fan-out nets"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 8209,
+    "output_tokens": 244,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    28.1,
+    28.0,
+    17.3,
+    16.9,
+    25.7,
+    19.7,
+    18.3,
+    20.3,
+    34.5
+   ],
+   "context_fraction": 0.501,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "names operation": true
+   }
+  },
+  {
+   "question": "What regions may consume more power?",
+   "focus": null,
+   "status": 200,
+   "seconds": 29.1,
+   "reply": "The regions that may consume more power are:\n\n- The **Result** bus, which is the output of the circuit, has a larger logic cone with 239 gates and 64 XOR/XNOR/adder cells. This region is likely to be active regardless of the selection.\n- The **Result_mul** bus, which is the output of the multiplier, has a logic cone with 213 gates and 57 XOR/XNOR/adder cells, indicating it may also be active.\n- The **Result_add** bus, which is the output of the adder, has a logic cone with 10 gates and 7 XOR/XNOR/adder cells, suggesting it might be active as well.\n\nAdditionally, the following high fan-out nets may contribute to increased power consumption:\n- **operation** (16 loads, driven by the primary input operation)\n- **\\multiplier_1/n115** (8 loads, driven by [G128] (INV_X0P7M_A9TH))\n- **\\multiplier_1/n116** (8 loads, driven by [G131] (INV_X0P7M_A9TH))\n- **\\multiplier_1/n126** (8 loads, driven by [G140] (INV_X0P7M_A9TH))\n- **\\multiplier_1/n127** (8 loads, driven by [G135] (INV_X0P7M_A9TH))\n\nThese regions and nets are candidates for further investigation to reduce power consumption.",
+   "tools": [
+    [
+     "power_analysis",
+     {}
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: Structural power indicators (no activity data)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7778,
+    "output_tokens": 745,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    28.8,
+    44.9,
+    34.2,
+    25.9,
+    24.5,
+    23.5,
+    23.6,
+    25.9,
+    32.0,
+    33.9,
+    31.5,
+    29.8,
+    36.1,
+    24.8,
+    36.8,
+    21.9,
+    19.2,
+    19.9,
+    25.0,
+    26.1,
+    27.5
+   ],
+   "context_fraction": 0.475,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "power tool": true
+   }
+  },
+  {
+   "question": "Which blocks are largest?",
+   "focus": null,
+   "status": 200,
+   "seconds": 14.4,
+   "reply": "The largest blocks in terms of gate count are:\n\n- **multiplier_1** with 213 gates (89% of total gates), which are mainly composed of NOR2 (70 gates), ADDF (34 gates), INV (31 gates), NAND2 (29 gates), and XOR2 (10 gates).\n- **top** with 16 gates (6.7% of total gates), which are composed of AND2 (8 gates) and MX2 (8 gates).\n- **adder_1** with 10 gates (4% of total gates), which are composed of ADDF (6 gates), NOR2 (2 gates), XOR3 (1 gate), and AND2 (1 gate).\n\nThese blocks are the densest sub-blocks within the circuit. No duplicate logic was found.",
+   "tools": [
+    [
+     "area_analysis",
+     {
+      "block": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Gate counts by block (area proxy; no cell area data)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7100,
+    "output_tokens": 358,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    35.7,
+    24.2,
+    20.1,
+    27.8,
+    19.4,
+    17.0,
+    18.1,
+    19.0,
+    17.9,
+    27.3,
+    24.7
+   ],
+   "context_fraction": 0.433,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "names multiplier_1": true,
+    "area tool": true
+   }
+  },
+  {
+   "question": "How could I improve performance?",
+   "focus": null,
+   "status": 200,
+   "seconds": 19.4,
+   "reply": "To improve the performance of the circuit, you might consider the following optimization candidates:\n\n1. **O1**: Target the longest path from [G132] to [G0], which is 19 gate levels long. This path could be restructured or rebalanced to reduce the worst-case propagation delay. The impact is unmeasured, but it could potentially reduce the delay.\n\n2. **O2**: Target the ripple carry chain in adder_1, which consists of 6 full/half-adder cells. This chain could be replaced with a carry-lookahead or parallel-prefix structure to reduce the carry delay. The impact is also unmeasured, but it could potentially reduce the delay.\n\n3. **O3**: Target the net operation, which has a fan-out of 16. This net could be buffered, cloned, or the driver could be upsized to reduce the load-dependent delay. The impact is unmeasured.\n\n4. **O4**: Target the net \\multiplier_1/n115, which has a fan-out of 8. This net could be buffered, cloned, or the driver could be upsized to reduce the load-dependent delay. The impact is unmeasured.\n\n5. **O5**: Target the net \\multiplier_1/n116, which also has a fan-out of 8. This net could be buffered, cloned, or the driver could be upsized to reduce the load-dependent delay. The impact is unmeasured.\n\nThese optimizations are based on structural heuristics and have not been measured for actual performance improvements. You should investigate these candidates further to determine which might be most effective.",
+   "tools": [
+    [
+     "optimization_suggestions",
+     {
+      "category": "performance",
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: O1 [performance] longest path G132 -> G0 (19 gate levels)",
+    "structural heuristic: O2 [performance] ripple carry chain in adder_1 (6 adder cells)",
+    "structural heuristic: O3 [performance] net operation (fan-out 16)",
+    "structural heuristic: O4 [performance] net \\multiplier_1/n115 (fan-out 8)",
+    "structural heuristic: O5 [performance] net \\multiplier_1/n116 (fan-out 8)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7873,
+    "output_tokens": 472,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    31.1,
+    37.6,
+    25.8,
+    28.3,
+    25.9,
+    28.9,
+    22.8,
+    20.6,
+    21.5,
+    25.0,
+    27.7,
+    20.5,
+    26.6,
+    22.8,
+    29.0
+   ],
+   "context_fraction": 0.481,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "optimization cards": true,
+    "cards carry all fields": true
+   }
+  },
+  {
+   "question": "What should I investigate for PPA?",
+   "focus": null,
+   "status": 200,
+   "seconds": 21.3,
+   "reply": "For Power and Performance Analysis (PPA), you should investigate the following optimization candidates:\n\n- **O1 [performance]**: Longest path from [G132] to [G0] with 19 gate levels. This could be a candidate for restructuring or rebalancing to reduce worst-case propagation delay.\n- **O2 [performance]**: Ripple carry chain in adder_1 with 6 adder cells. This could benefit from a carry-lookahead or parallel-prefix structure to reduce the carry delay.\n- **O3 [performance]**: High fan-out load on net operation (fan-out 16). This could be improved by buffering, cloning the driver, or upsizing the driver.\n- **O4 [performance]**: High fan-out load on net \\multiplier_1/n115 (fan-out 8). This could be improved by buffering, cloning the driver, or upsizing the driver.\n- **O5 [performance]**: High fan-out load on net \\multiplier_1/n116 (fan-out 8). This could be improved by buffering, cloning the driver, or upsizing the driver.\n- **O6 [power]**: Output Result selects between Result_add and Result_mul. This could be improved by isolating or gating the unselected block to reduce dynamic power.\n- **O7 [power]**: High fan-out load on net operation (fan-out 16). This could be improved by restructuring or reducing the load to reduce dynamic power.\n- **O8 [power]**: High fan-out load on net \\multiplier_1/n115 (fan-out 8). This could be improved by restructuring or reducing the load to reduce dynamic power.\n\nThese optimizations are based on structural heuristics and could potentially reduce delay or power consumption, but their actual impact is unmeasured due to the lack of delay and activity data.",
+   "tools": [
+    [
+     "optimization_suggestions",
+     {
+      "category": null,
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: O1 [performance] longest path G132 -> G0 (19 gate levels)",
+    "structural heuristic: O2 [performance] ripple carry chain in adder_1 (6 adder cells)",
+    "structural heuristic: O3 [performance] net operation (fan-out 16)",
+    "structural heuristic: O4 [performance] net \\multiplier_1/n115 (fan-out 8)",
+    "structural heuristic: O5 [performance] net \\multiplier_1/n116 (fan-out 8)",
+    "structural heuristic: O6 [power] output Result selects between Result_add, Result_mul",
+    "structural heuristic: O7 [power] net operation (fan-out 16)",
+    "structural heuristic: O8 [power] net \\multiplier_1/n115 (fan-out 8)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 8589,
+    "output_tokens": 506,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    32.4,
+    40.8,
+    22.8,
+    24.6,
+    22.3,
+    19.9,
+    20.9,
+    22.3,
+    18.8,
+    19.1,
+    22.5,
+    16.1,
+    18.2,
+    18.4,
+    18.2,
+    20.1,
+    24.6
+   ],
+   "context_fraction": 0.524,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "optimization tool": true
+   }
+  },
+  {
+   "question": "Which regions does GraphSAINT find suspicious?",
+   "focus": null,
+   "status": 200,
+   "seconds": 8.0,
+   "reply": "GraphSAINT has identified suspicious regions in Modules #1, #2, and #3. These regions are predicted to contain Control Logic, but there are no deterministic findings to suggest wiring faults. Specifically:\n\n- Module #1: 1 gate ([G0]) with predicted Control Logic.\n- Module #2: 1 gate ([G1]) with predicted Control Logic.\n- Module #3: 1 gate ([G2]) with predicted Control Logic.",
+   "tools": [
+    [
+     "explain_region",
+     {
+      "gate_id": null,
+      "module": null
+     }
+    ]
+   ],
+   "evidence": [
+    "ml_prediction: Regions with model-based hints"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 6504,
+    "output_tokens": 192,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    26.6,
+    28.1,
+    29.3,
+    18.4,
+    24.1,
+    25.7,
+    26.5
+   ],
+   "context_fraction": 0.397,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "region tool": true,
+    "ML evidence labelled": true
+   }
+  },
+  {
+   "question": "What is G9999?",
+   "focus": null,
+   "status": 200,
+   "seconds": 3.9,
+   "reply": "Gate with ID 9999 does not exist in the circuit. Please check the gate ID and try again.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 9999
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "G9999"
+   ],
+   "usage": {
+    "input_tokens": 6256,
+    "output_tokens": 78,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 9999
+   },
+   "cpu_percent_samples": [
+    26.6,
+    36.0,
+    23.2
+   ],
+   "context_fraction": 0.382,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "says not found": true,
+    "no G9999 chip": true
+   }
+  },
+  {
+   "question": "What is the critical path delay in nanoseconds?",
+   "focus": null,
+   "status": 200,
+   "seconds": 24.1,
+   "reply": "The circuit does not have delay data, so no nanoseconds (ns) or picoseconds (ps) values can be provided for the critical path delay. The maximum logic depth is 19 gate levels, with paths ranging from 16 to 19 levels. The longest paths are:\n\n- Path 1 (19 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G34] -> [G124] -> [G125] -> [G94] -> ...; from a[7]; to output Result[0]; blocks multiplier_1, top\n- Path 2 (18 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G34] -> [G124] -> [G125] -> [G94] -> ...; from a[7]; to output Result[1]; blocks multiplier_1, top\n- Path 3 (16 levels): [G132] -> [G156] -> [G48] -> [G51] -> [G208] -> [G104] -> [G105] -> [G224] -> [G121] -> [G101] -> [G123] -> [G109] -> [G236] -> [G79] -> [G80] -> [G13]; from a[7]; to output Result[4]; blocks multiplier_1, top\n\nThe ripple carry chains are composed of 6 adder cells in adder_1 and 5 adder cells in multiplier_1. There are no high fan-out nets in this circuit.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Longest path: 19 gate levels",
+    "deterministic: Ripple carry chain: 6 adder cells (adder_1)",
+    "deterministic: Highest fan-out nets"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 8523,
+    "output_tokens": 589,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    18.9,
+    32.9,
+    26.4,
+    25.4,
+    24.7,
+    21.7,
+    17.7,
+    18.7,
+    20.4,
+    19.9,
+    18.0,
+    20.5,
+    17.6,
+    17.3,
+    21.9,
+    26.6,
+    29.4,
+    35.4,
+    32.9
+   ],
+   "context_fraction": 0.52,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "admits no delay data": false
+   }
+  },
+  {
+   "question": "How many milliwatts does the multiplier consume?",
+   "focus": null,
+   "status": 200,
+   "seconds": 14.6,
+   "reply": "The multiplier consumes no power because there is no switching activity or power data available for this circuit. The circuit is purely combinational, with no clock network or register power. The high activity regions are the logic cones of the Result, Result_mul, and Result_add buses. The high fan-out nets include operation, \\multiplier_1/n115, \\multiplier_1/n116, and \\multiplier_1/n126, which have 16, 8, 8, and 8 loads respectively. The control signal operation also has a high fan-out of 16 pins. However, no power consumption data is available for this circuit.",
+   "tools": [
+    [
+     "power_analysis",
+     {}
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: Structural power indicators (no activity data)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7597,
+    "output_tokens": 350,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    35.9,
+    24.9,
+    18.8,
+    18.3,
+    20.8,
+    25.9,
+    24.3,
+    22.5,
+    24.8,
+    19.3,
+    17.5,
+    22.5
+   ],
+   "context_fraction": 0.464,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "admits no power data": true
+   }
+  },
+  {
+   "question": "What is the silicon area of this circuit in square microns?",
+   "focus": null,
+   "status": 200,
+   "seconds": 10.4,
+   "reply": "The circuit under analysis does not have actual cell area data. Instead, it uses gate counts as a proxy for area. Cell families include NOR2, ADDF, INV, NAND2, AND2, XOR2, MX2, and OR2. There is no duplicate logic found within the circuit.",
+   "tools": [
+    [
+     "area_analysis",
+     {
+      "block": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Gate counts by block (area proxy; no cell area data)"
+   ],
+   "dropped": [
+    "claim: unsupported area value \"239 square microns\" (no area data exists)",
+    "claim: wrong gate count \"adder_1 with 4 gates\" (adder_1 has 10 gates)"
+   ],
+   "usage": {
+    "input_tokens": 7068,
+    "output_tokens": 245,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    22.8,
+    23.1,
+    17.6,
+    18.2,
+    19.9,
+    18.6,
+    19.2,
+    21.5
+   ],
+   "context_fraction": 0.431,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "admits no area data": true
+   }
+  },
+  {
+   "question": "Does G23 drive G100 directly?",
+   "focus": null,
+   "status": 200,
+   "seconds": 5.8,
+   "reply": "[G23] (adder_1/intadd_0/U5) does not directly drive [G100] (multiplier_1/U139). [G23] drives [G5] and [G22], but [G100] is not in its fan-out list.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 23
+     }
+    ],
+    [
+     "get_gate",
+     {
+      "gate_id": 100
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7956,
+    "output_tokens": 99,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    25.9,
+    26.8,
+    25.4,
+    20.3,
+    26.8
+   ],
+   "context_fraction": 0.486,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "no false \"G23 drives G100\" survives": true
+   }
+  },
+  {
+   "question": "Are there connectivity issues?",
+   "focus": null,
+   "status": 200,
+   "seconds": 17.5,
+   "reply": "There are connectivity issues identified by the deterministic connectivity checks (errors/warnings):\n\n- F001: Input pin CI of adder_1/intadd_0/U5 (ADDF_X1M_A9TH) is not connected to any net. Suggested fix: Connect [G24] pin CO to [G23] pin CI.\n- F002: Carry-out CO of adder_1/intadd_0/U6 (ADDF_X1M_A9TH) drives net \\adder_1/intadd_0/n5, which no gate or primary output reads. Suggested fix: Connect [G24] pin CO to [G23] pin CI.\n- F003: Result_add bits Result_add[12]..Result_add[8] (significance 3..7) no longer depend on a bits of significance 0..2; no longer depend on b bits of significance 0. Suggested fix: Connect [G24] pin CO to [G23] pin CI.\n\nAdditionally, there are model-based hints from GraphSAINT predictions (not wiring faults):\n\n- F004: 13 gate(s) predicted Control Logic have no neighbour of the same predicted class, so each forms a one-gate \"sub-circuit\" (GraphSAINT predictions). No suggested fix is provided for this finding.",
+   "tools": [
+    [
+     "list_findings",
+     {
+      "category": null,
+      "severity": null
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7875,
+    "output_tokens": 398,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    15.2,
+    17.4,
+    21.9,
+    14.9,
+    18.9,
+    19.3,
+    21.1,
+    23.8,
+    27.7,
+    22.9,
+    15.2,
+    16.9,
+    22.8,
+    23.0
+   ],
+   "context_fraction": 0.481,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "mentions F001": true
+   }
+  },
+  {
+   "question": "How do I fix this?",
+   "focus": {
+    "kind": "finding",
+    "id": "F001"
+   },
+   "status": 200,
+   "seconds": 7.9,
+   "reply": "To fix the issue reported by finding F001, you need to connect the CO pin of [G24] to the CI pin of [G23]. The suggested edge indicates that the CO pin of [G24] should be connected to the CI pin of [G23], as [G23]'s CI is unconnected and [G24]'s CO drives the net \\adder_1/intadd_0/n5, which is not read by any gate. This repair will ensure that the CI pin is properly connected.",
+   "tools": [
+    [
+     "explain_finding",
+     {
+      "finding_id": "F001"
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "edge G24->G23"
+   ],
+   "usage": {
+    "input_tokens": 7411,
+    "output_tokens": 176,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "finding",
+    "id": "F001"
+   },
+   "cpu_percent_samples": [
+    24.0,
+    15.1,
+    18.7,
+    15.3,
+    16.5,
+    21.6,
+    26.4
+   ],
+   "context_fraction": 0.452,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "repair edge G24->G23 CI highlighted": true,
+    "reply names G24 and G23": true
+   }
+  },
+  {
+   "question": "Why is this region suspicious?",
+   "focus": {
+    "kind": "module",
+    "id": 15
+   },
+   "status": 200,
+   "seconds": 12.2,
+   "reply": "The region [M15] is suspicious because all 5 gates within it are predicted to be part of the Multiplier module by the GraphSAINT model, which is a prediction and not a fact. However, only 0 out of 5 gates have labels that match the prediction, and there are also 5 gates outside this module that are predicted to be part of the Control Logic. Additionally, there are findings (F001 and F003) that indicate wiring issues within this module, suggesting that the structure does not fully align with the prediction. This discrepancy between the prediction and the actual structure could be a cause for concern.",
+   "tools": [
+    [
+     "explain_region",
+     {
+      "gate_id": null,
+      "module": 15
+     }
+    ]
+   ],
+   "evidence": [
+    "ml_prediction: Module #15: GraphSAINT predicts Multiplier",
+    "deterministic: Module #15: netlist facts"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7414,
+    "output_tokens": 298,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "module",
+    "id": 15
+   },
+   "cpu_percent_samples": [
+    20.2,
+    38.8,
+    27.2,
+    15.1,
+    15.6,
+    17.2,
+    13.5,
+    17.9,
+    20.2,
+    34.7
+   ],
+   "context_fraction": 0.453,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "says prediction": true,
+    "ML and fact cards separated": true
+   }
+  },
+  {
+   "question": "Explain this gate",
+   "focus": {
+    "kind": "gate",
+    "id": 23
+   },
+   "status": 200,
+   "seconds": 16.1,
+   "reply": "Gate [G23] (adder_1/intadd_0/U5) is a 4th-order ADDF_X1M_A9TH cell. It has two input pins, A and B, which are driven by primary inputs a[4] and b[4], respectively. The output pins CO and S are connected to [G22] and [G5], respectively. The CO pin drives the net \\adder_1/intadd_0/n4, which is read by [G22]. The S pin drives the net Result_add[12], which is read by [G5]. The gate has an unconnected pin CI. The ADDF_X1M_A9TH cell is predicted by GraphSAINT to be part of the Multiplier module, which contradicts the instance name heuristic label of Adder. The findings F001 and F003 indicate issues with the pin configuration and dependency of the output bits.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 23
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "N:\b[4]"
+   ],
+   "usage": {
+    "input_tokens": 7788,
+    "output_tokens": 395,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    31.1,
+    16.5,
+    13.7,
+    17.6,
+    20.4,
+    19.0,
+    26.0,
+    17.3,
+    16.9,
+    16.4,
+    17.6,
+    13.9,
+    23.7
+   ],
+   "context_fraction": 0.475,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "get_gate 23": true
+   }
+  },
+  {
+   "question": "What does this circuit do?",
+   "focus": null,
+   "status": 200,
+   "seconds": 18.4,
+   "reply": "This circuit performs an output selection logic, including a 4-bit adder and a 4x4 multiplier. It takes inputs `a[4]` and `b[4]` and a control signal `operation`. The control signal drives the select pin of 4 multiplexer cells, which are outside the operand buses and have a fan-out of 8. The outputs are `Result[8]`.\n\nThe circuit has three main blocks:\n- `multiplier_1` with 65 gates, inferred to be a multiplier.\n- `top` with 8 gates, inferred to be a selector.\n- `adder_1` with 6 gates, inferred to be an adder.\n\nThe data paths are as follows:\n- `a` and `b` are connected to `adder_1`, which then connects to `Result_add` and `top`.\n- `a` and `b` are also connected to `multiplier_1`, which then connects to `Result_mul` and `top`.\n\nThe circuit is purely combinational, with no registers or clock cells.",
+   "tools": [
+    [
+     "circuit_overview",
+     {}
+    ]
+   ],
+   "evidence": [
+    "deterministic: Circuit structure (from the netlist)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 10387,
+    "output_tokens": 445,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    14.8,
+    20.4,
+    39.6,
+    21.3,
+    26.9,
+    26.6,
+    30.5,
+    26.6,
+    21.1,
+    20.1,
+    24.1,
+    22.7,
+    30.4,
+    34.4
+   ],
+   "context_fraction": 0.634,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "mentions add/mul": true
+   }
+  },
+  {
+   "question": "Where could I reduce area?",
+   "focus": null,
+   "status": 200,
+   "seconds": 10.5,
+   "reply": "To reduce area, you could investigate the block `multiplier_1`, which has 65 gates out of the 79 total gates in the circuit. This block holds the majority of the logic and has a high proportion of specific cells like NOR2, INV, NAND2, OAI21, and XOR2. Reducing the area here may have the largest potential effect, though the impact is unmeasured. Consider architectural changes within this block.",
+   "tools": [
+    [
+     "optimization_suggestions",
+     {
+      "category": "area",
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "structural heuristic: O6 [area] block multiplier_1 (65 gates, 82% of the circuit)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 6346,
+    "output_tokens": 255,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    44.6,
+    18.7,
+    20.0,
+    29.3,
+    28.5,
+    24.2,
+    30.3,
+    29.5
+   ],
+   "context_fraction": 0.387,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "optimization tool": true
+   }
+  },
+  {
+   "question": "What is the critical path?",
+   "focus": null,
+   "status": 200,
+   "seconds": 11.9,
+   "reply": "The critical path in the circuit is 10 levels long, from input a[2] to output Result[2]. This path involves gates [G54], [G44], [G34], [G30], [G36], [G23], [G18], [G78], [G39], and [G0]. There are no delay data available, so no ns/ps values can be provided. The highest fan-out nets are operation, which loads the primary input, and several nets driven by gates on the longest path. No specific optimizations are suggested based on the structural analysis.",
+   "tools": [
+    [
+     "timing_analysis",
+     {
+      "gate_id": null
+     }
+    ]
+   ],
+   "evidence": [
+    "deterministic: Longest path: 10 gate levels",
+    "deterministic: Highest fan-out nets"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7332,
+    "output_tokens": 276,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    21.9,
+    28.2,
+    20.8,
+    23.1,
+    21.9,
+    23.3,
+    21.1,
+    26.7,
+    24.6,
+    31.8
+   ],
+   "context_fraction": 0.448,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "timing tool": true
+   }
+  }
+ ],
+ "failures": [
+  "What drives it?: G24 drives G23; reply='Gate [G23] is driven by the primary inputs `a[4]` and `b[4]`. Specifically, the primary input `a[4]` drives the input pin `B` of [G23], and the primary input `b[4]` drives the input pin `A` of [G23]. The output pin `S` of [G23] is read by gates [G5] and [G22]. The GraphSAINT model predicts this gate'; tools=[('get_gate', {'gate_id': 23})]",
+  "hallucination: timing: admits no delay data; reply='The circuit does not have delay data, so no nanoseconds (ns) or picoseconds (ps) values can be provided for the critical path delay. The maximum logic depth is 19 gate levels, with paths ranging from 16 to 19 levels. The longest paths are:\\n\\n- Path 1 (19 levels): [G132] -> [G156] -> [G48] -> [G51] ->'; tools=[('timing_analysis', {'gate_id': None})]"
+ ],
+ "metrics": {
+  "probe_wait_s": 0.1,
+  "model_load_s": 28.58,
+  "cold_first_token_wall_s": 49.78,
+  "decode_tokens_per_s": 5.3,
+  "prompt_tokens_per_s": 22.0,
+  "gpu_after_load": {
+   "nvidia_smi": "NVIDIA GeForce RTX 4050 Laptop GPU, 4763 MiB, 6141 MiB, 100 %",
+   "ollama_loaded": [
+    {
+     "name": "qwen2.5-3b-16k:latest",
+     "size_vram_mb": 2596,
+     "size_mb": 2596,
+     "context_length": 16384
+    }
+   ]
+  },
+  "first_analysis_s (incl. LLM intent)": 100.5,
+  "first_insights_s": 0.04,
+  "cached_analysis_s": 0.002,
+  "insights_12520_gates_s (incl. analysis)": 183.2,
+  "warm_chat_latency_s": {
+   "median": 14.6,
+   "p90": 36.5,
+   "min": 3.9,
+   "max": 104.0,
+   "n": 27
+  },
+  "chat_input_tokens_per_turn (summed over LLM calls)": {
+   "median": 7773,
+   "max": 10781
+  },
+  "context_window": 16384,
+  "cpu_total_percent_during_chat": {
+   "mean": 33.6,
+   "max": 94.3
+  },
+  "gpu_end": {
+   "nvidia_smi": "NVIDIA GeForce RTX 4050 Laptop GPU, 4197 MiB, 6141 MiB, 100 %",
+   "ollama_loaded": [
+    {
+     "name": "qwen2.5-3b-16k:latest",
+     "size_vram_mb": 2596,
+     "size_mb": 2596,
+     "context_length": 16384
+    }
+   ]
+  }
+ },
+ "status": {
+  "available": true,
+  "model": "qwen2.5-3b-16k",
+  "reason": null
+ },
+ "summary": {
+  "questions": 27,
+  "checks": 92,
+  "checks_passed": 90,
+  "failures": 2
+ }
+}

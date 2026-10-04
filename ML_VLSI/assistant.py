@@ -21,6 +21,7 @@ import uuid
 from collections import Counter, OrderedDict, deque
 
 import circuit_checks as cc
+import design_insights
 from grounding import Grounder
 from intent_analyzer import CIRCUIT_ALIAS
 from llm_client import LLMError
@@ -32,6 +33,7 @@ MAX_SESSIONS = 100
 SESSION_TTL_S = 3600
 MAX_MESSAGE_CHARS = 2000
 CHAT_MAX_OUTPUT_TOKENS_LOCAL = 1024
+REPORT_MAX_OUTPUT_TOKENS_LOCAL = 4096
 SUGGESTION_LABEL = '// Suggestion, not applied'
 
 RULES = """Hard rules:
@@ -95,7 +97,7 @@ def _ref_gates(model, texts, nets=(), buses=()):
         refs = Grounder.refs_in(t or '')
         nets |= set(refs['nets'])
         buses |= set(refs['buses'])
-    out = {'nets': {}, 'buses': {}}
+    out = {'nets': {}, 'buses': {}, 'modules': {}}
 
     def gates_of(net):
         canon = cc._canon(model, net)
@@ -250,13 +252,41 @@ TOOLS = [
           {'name': _STR}, ['name']),
     _tool('explain_finding', 'Full details of one finding (evidence, gates, nets, suggested edges).',
           {'finding_id': _STR}, ['finding_id']),
+    _tool('circuit_overview', 'What the circuit does: inputs, outputs, control signals, blocks with gate counts, '
+                              'datapaths and how blocks connect.', {}, []),
+    _tool('timing_analysis', 'Structural timing: logic levels, longest paths, carry chains, high fan-out nets. With a '
+                             'gate_id: that gate\'s depth and whether it is on a longest path. No delay data exists.',
+          {'gate_id': {'type': ['integer', 'null']}}, ['gate_id']),
+    _tool('power_analysis', 'Structural power indicators (high fan-out nets, large XOR-rich cones, parallel results '
+                            'that are selected). No switching-activity or power data exists.', {}, []),
+    _tool('area_analysis', 'Gate counts by block (an area proxy), cell families, duplicate logic, removable logic. '
+                           'block = hierarchy block name or null. No cell area data exists.',
+          {'block': {'type': ['string', 'null']}}, ['block']),
+    _tool('optimization_suggestions', 'Optimization candidates to investigate, each with target, reason, evidence, '
+                                      'potential impact, confidence and type. Filter by category and/or gate_id.',
+          {'category': {'type': ['string', 'null'], 'enum': ['performance', 'power', 'area', None]},
+           'gate_id': {'type': ['integer', 'null']}}, ['category', 'gate_id']),
+    _tool('explain_region', 'A GraphSAINT predicted module (region): the ML prediction and its confidence, kept apart '
+                            'from the structural facts about the same gates. Give module (number as in the UI, '
+                            'Module #3 -> 3) or gate_id; both null lists the regions with model-based hints.',
+          {'gate_id': {'type': ['integer', 'null']}, 'module': {'type': ['integer', 'null']}},
+          ['gate_id', 'module']),
+    _tool('get_bom', 'Cell bill of materials (cell types, counts, drive strengths, library area if loaded) with '
+                     'BOM-based power/performance/area recommendations; with cell = a cell type such as '
+                     'NAND2_X1M_A9TH, that cell\'s datasheet (pins, function, drive, library data).',
+          {'cell': {'type': ['string', 'null']}}, ['cell']),
 ]
+CATEGORIES = ('performance', 'power', 'area')
+_BOM_RE = re.compile(r'\b(bom|bill\s+of\s+materials?|parts?\s+list|datasheets?|data\s+sheets?|cell\s+(?:usage|mix|list|'
+                     r'types?)|which\s+cells|drive\s+strengths?|liberty|standard\s+cells?)\b', re.I)
+_CELL_RE = re.compile(r'\b[A-Z][A-Z0-9]*_X\w+\b')
 
 
 class CircuitTools:
-    def __init__(self, model, analysis):
+    def __init__(self, model, analysis, insights=None):
         self.m = model
         self.a = analysis
+        self._insights = insights
         self.ctx = cc._Ctx(model)
         self.findings = {f['id']: f for f in analysis['findings']}
         self.preds = analysis.get('predictions')
@@ -481,7 +511,185 @@ class CircuitTools:
             names = [b['name'] for b in self.a['evidence']['blocks']] + [b['name'] for b in self.a['intent'].get('blocks', [])]
             return {'error': f'unknown block {name!r}; known: {names[:20]}'}
         flow = [d for d in self.a['evidence']['dataflow'] if name in (d['from_block'], d['to_block'])]
-        return {'hierarchy_block': ev, 'inferred_blocks': inferred, 'dataflow': flow}
+        lines = []
+        if ev:
+            lines.append(f"Block {name}: {ev['gates']} gates; main cells "
+                         + ', '.join(f'{k} {v}' for k, v in ev['top_cells'].items()) + '.')
+            if ev.get('predicted_classes'):
+                lines.append(f"- {self._predictor()} predicts (ML, not a fact): "
+                             + ', '.join(f'{k} {v}' for k, v in ev['predicted_classes'].items()))
+        for b in inferred:
+            lines.append(f"- inferred role {b['role']}" + (f", {b['width']}-bit" if b.get('width') else '')
+                         + f"; inputs {', '.join(b['input_buses']) or '-'}; outputs {', '.join(b['output_buses']) or '-'}"
+                         f" ({b.get('evidence') or 'structural inference'})")
+        lines += [f"- {d['from_block']} feeds {d['to_block']} via {', '.join(d['via'])}" for d in flow]
+        if ev:
+            gates = [g for g in range(self.ctx.n) if (self.m['hier_prefix'][g] or 'top').split('/')[0] == name]
+            fs = sorted({f['id'] for f in self.a['findings'] if set(f['gate_ids']) & set(gates)
+                         and f['category'] != 'gnn_suspicion'})
+            lines.append(f"- deterministic findings in this block: {', '.join(fs) or 'none'}")
+        return {'summary': '\n'.join(lines), 'hierarchy_block': ev, 'inferred_blocks': inferred, 'dataflow': flow}
+
+    # ---- design copilot (deterministic insights; see design_insights.py) -----------------------------------
+    @property
+    def ins(self):
+        if self._insights is None:
+            self._insights = design_insights.compute(self.m, self.a)
+        return self._insights
+
+    @staticmethod
+    def _card(kind, title, basis, lines, gate_ids=(), nets=(), finding_ids=(), **extra):
+        card = {'kind': kind, 'title': title, 'basis': basis, 'lines': [l for l in lines if l],
+                'gate_ids': list(gate_ids)[:60], 'nets': list(nets)[:8], 'finding_ids': list(finding_ids)[:8]}
+        card.update(extra)
+        return card
+
+    def t_circuit_overview(self):
+        s = self.ins.structure
+        summary = self.ins.overview_summary()
+        ctrl_gates = [g for c in s['control_signals'][:2] for g in c['gates']]
+        return {'summary': summary,
+                'inputs': s['inputs'], 'outputs': s['outputs'],
+                'control_signals': [{k: c[k] for k in ('net', 'fanout', 'select_pins', 'why')} for c in s['control_signals']],
+                'blocks': [{k: b[k] for k in ('name', 'gates', 'inferred_role')} for b in s['blocks']],
+                'datapaths': s['datapath_chains'], 'combinational_only': s['combinational_only'],
+                'cards': [self._card('overview', 'Circuit structure (from the netlist)', 'deterministic',
+                                     summary.split('\n'), gate_ids=ctrl_gates,
+                                     nets=[c['net'] for c in s['control_signals'][:4]])]}
+
+    def t_timing_analysis(self, gate_id=None):
+        ins = self.ins
+        if gate_id is not None:
+            if not self._ok_gate(gate_id):
+                return self._gate_err(gate_id)
+            summary = ins.gate_timing_summary(gate_id)
+            x = ins.gate_timing(gate_id)
+            return {'summary': summary, 'gate': x, 'data_availability': self.ins.data_availability()['note'],
+                    'cards': [self._card('timing', f'G{gate_id} timing indicators', 'deterministic',
+                                         summary.split('\n')[1:], gate_ids=[gate_id] + x['fanout_gates'][:10],
+                                         note='unit-delay gate levels; no delay data')]}
+        t = ins.timing
+        cards = []
+        if t['paths']:
+            p = t['paths'][0]
+            cards.append(self._card('timing', f"Longest path: {p['levels']} gate levels", 'deterministic',
+                                    [' -> '.join(f'G{g}' for g in p['gates']),
+                                     f"from {', '.join(p['from_inputs']) or '-'} to {', '.join(p['to_outputs']) or '-'}",
+                                     'unit-delay gate levels; real delay depends on cells and loads (no delay data)'],
+                                    gate_ids=p['gates']))
+        for c in t['carry_chains'][:1]:
+            cards.append(self._card('timing', f"Ripple carry chain: {c['length']} adder cells ({c['block']})",
+                                    'deterministic', [' -> '.join(f'G{g}' for g in c['gates'])], gate_ids=c['gates']))
+        if t['high_fanout']:
+            cards.append(self._card('timing', 'Highest fan-out nets', 'deterministic',
+                                    [f"{h['net']}: {h['fanout']} loads, driver {h['driver']}"
+                                     + (' (on a longest path)' if h['on_longest_path'] else '') for h in t['high_fanout'][:5]],
+                                    gate_ids=[g for h in t['high_fanout'][:3] for g in h['driver_gates']],
+                                    nets=[h['net'] for h in t['high_fanout'][:5]]))
+        return {'summary': ins.timing_summary(), 'max_depth': t['max_depth'],
+                'paths': [{'levels': p['levels'], 'gates': p['gates'][:40], 'from': p['from_inputs'], 'to': p['to_outputs']}
+                          for p in t['paths'][:3]],
+                'data_availability': self.ins.data_availability()['note'], 'cards': cards}
+
+    def t_power_analysis(self):
+        p = self.ins.power
+        summary = self.ins.power_summary()
+        return {'summary': summary, 'data_availability': self.ins.data_availability()['note'],
+                'cones': p['cones'][:5], 'high_fanout': [{k: h[k] for k in ('net', 'fanout', 'driver')} for h in p['high_fanout'][:5]],
+                'cards': [self._card('power', 'Structural power indicators (no activity data)', 'structural heuristic',
+                                     summary.split('\n')[1:], gate_ids=[g for h in p['high_fanout'][:3] for g in h['driver_gates']],
+                                     nets=[h['net'] for h in p['high_fanout'][:4]])]}
+
+    def t_area_analysis(self, block=None):
+        names = [b['name'] for b in self.ins.area['blocks']]
+        if block is not None and block not in names:
+            return {'error': f'unknown block {block!r}; known blocks: {names}'}
+        summary = self.ins.area_summary(block)
+        a = self.ins.area
+        dup_gates = [g for d in a['duplicate_groups'][:3] for g in d['gates']]
+        return {'summary': summary, 'data_availability': self.ins.data_availability()['note'],
+                'blocks': [{k: b[k] for k in ('name', 'gates', 'share')} for b in a['blocks']],
+                'duplicate_gate_count': a['duplicate_gate_count'],
+                'cards': [self._card('area', 'Gate counts by block (area proxy; no cell area data)', 'deterministic',
+                                     summary.split('\n')[1:], gate_ids=dup_gates)]}
+
+    def t_optimization_suggestions(self, category=None, gate_id=None):
+        if category is not None and category not in CATEGORIES:
+            return {'error': f'unknown category {category!r}; use one of {list(CATEGORIES)} or null'}
+        if gate_id is not None and not self._ok_gate(gate_id):
+            return self._gate_err(gate_id)
+        items = self.ins.optimizations_for(category, gate_id)
+        summary = self.ins.optimization_summary(items[:8])
+        if gate_id is not None:
+            facts = self.ins.gate_timing_summary(gate_id)
+            if not items:
+                summary = (f'No optimization candidate computed from the netlist targets G{gate_id}. Its structural '
+                           f'facts:\n{facts}')
+            else:
+                summary += '\n' + facts
+        cards = [self._card('optimization', f"{o['id']} [{o['category']}] {o['target']}", o['type'], [],
+                            gate_ids=o['gate_ids'], nets=o['nets'],
+                            **{k: o[k] for k in ('id', 'category', 'target', 'reason', 'evidence', 'impact',
+                                                 'confidence', 'type')}) for o in items[:8]]
+        return {'summary': summary, 'count': len(items), 'suggestions': [o['id'] for o in items],
+                'note': 'Candidates to investigate; none has been measured.', 'cards': cards}
+
+    def t_get_bom(self, cell=None):
+        b = self.ins.bom
+        if cell is not None:
+            if not isinstance(cell, str) or not (any(r['cell'] == cell for r in b['rows'])
+                                                 or cell in design_insights.cell_datasheet.load_cell_library()):
+                return {'error': f'unknown cell type {cell!r}; cells used here: {[r["cell"] for r in b["rows"][:25]]}'}
+            summary = self.ins.bom_summary(cell)
+            row = next((r for r in b['rows'] if r['cell'] == cell), None)
+            return {'summary': summary, 'datasheet': design_insights.cell_datasheet.datasheet(cell, self.ins.liberty),
+                    'cards': [self._card('bom', f'Datasheet: {cell}', 'deterministic', summary.split('\n')[1:],
+                                         gate_ids=row['gate_ids'][:60] if row else [])]}
+        recs = [o for o in self.ins.optimizations if o.get('source') == 'bom']
+        summary = self.ins.bom_summary() + ('\n' + self.ins.optimization_summary(recs) if recs else
+                                            '\nNo BOM-based recommendations.')
+        cards = [self._card('bom', 'Cell BOM (counts from the netlist)', 'deterministic',
+                            self.ins.bom_summary().split('\n')[1:])]
+        cards += [self._card('optimization', f"{o['id']} [{o['category']}] {o['target']}", o['type'], [],
+                             gate_ids=o['gate_ids'], nets=o['nets'],
+                             **{k: o[k] for k in ('id', 'category', 'target', 'reason', 'evidence', 'impact',
+                                                  'confidence', 'type')}) for o in recs]
+        return {'summary': summary, 'totals': b['totals'], 'library_loaded': b['library_loaded'],
+                'rows': [{k: r[k] for k in ('cell', 'count', 'drive_strength')} for r in b['rows'][:30]],
+                'recommendations': [o['id'] for o in recs], 'cards': cards}
+
+    def t_explain_region(self, gate_id=None, module=None):
+        ins = self.ins
+        if gate_id is not None and not self._ok_gate(gate_id):
+            return self._gate_err(gate_id)
+        if gate_id is None and module is None:
+            mods = ins.suspicious_regions()
+            hints = [f for f in self.a['findings'] if f['category'] == 'gnn_suspicion']
+            lines = [f"{self._predictor()} model-based hints (ML, not wiring faults): "
+                     + ('; '.join(f"{f['id']} {f['check']} ({f.get('count', len(f['gate_ids']))} gates)" for f in hints[:6])
+                        or 'none') + '.']
+            for mnum in mods[:3]:
+                r = ins.region(module=mnum)
+                lines.append(r['summary'].split('\n')[0] + f" predicted {r['predicted_class']}; deterministic findings: "
+                             f"{', '.join(r['deterministic_findings']) or 'none'}.")
+            if not mods:
+                lines.append('No predicted module carries a model-based hint.')
+            return {'summary': '\n'.join(lines), 'modules': mods,
+                    'cards': [self._card('ml', 'Regions with model-based hints', 'ml_prediction', lines,
+                                         finding_ids=[f['id'] for f in hints[:8]])]}
+        r = ins.region(gate_id=gate_id, module=module)
+        if 'error' in r:
+            return r
+        ml = [l for l in r['summary'].split('\n') if l.startswith(('ML', 'Module'))]
+        st = [l for l in r['summary'].split('\n') if l.startswith('STRUCTURAL')]
+        cards = [self._card('ml', f"Module #{r['module']}: {self._predictor()} predicts {r['predicted_class']}",
+                            'ml_prediction', ml, gate_ids=r['gate_ids'], finding_ids=r['ml_findings'], module=r['module']),
+                 self._card('fact', f"Module #{r['module']}: netlist facts", 'deterministic', st,
+                            gate_ids=r['gate_ids'][:30], finding_ids=r['deterministic_findings'], module=r['module'])]
+        out = {k: v for k, v in r.items() if k != 'gate_ids'}
+        out['gate_ids'] = r['gate_ids'][:40]
+        out['cards'] = cards
+        return out
 
     def t_get_bus(self, name):
         bus = self.m['buses'].get(name)
@@ -516,6 +724,9 @@ class CircuitTools:
 
 
 def _truncate(obj):
+    """Tool output as the model sees it. UI cards stay out (their facts are already in the summary)."""
+    if isinstance(obj, dict) and 'cards' in obj:
+        obj = {k: v for k, v in obj.items() if k != 'cards'}
     text = json.dumps(obj, separators=(',', ':'), default=str)
     if len(text) > TOOL_OUTPUT_CHARS:
         text = text[:TOOL_OUTPUT_CHARS - 40] + '... [truncated to 4000 characters]'
@@ -619,6 +830,20 @@ How to answer:
    help with (gates, nets, buses, paths, findings, what the circuit does, GraphSAINT predictions).
 8. highlights: only gate ids, nets, finding ids and existing edges that your answer is about.
 9. To explain a fix, use the finding's suggested edges; do not propose other connections.
+10. Timing, power and area: this circuit has NO delay, power, activity or cell-area data (see data_availability).
+   Use only the structural indicators the tools give (gate levels, fan-out, gate counts) and say they are
+   structural indicators. Never write values in ns, ps, MHz, mW, uW, um2, and never give a percentage or "x times"
+   improvement: nothing has been measured. Say "could" or "may" for any optimization, never "will".
+11. Optimization: present the candidates from optimization_suggestions (target, reason, evidence, impact, confidence,
+   type). Do not invent other targets.
+12. GraphSAINT regions (modules, cited as [M3] for Module #3): first say what GraphSAINT predicts and how confident it
+   is (an ML prediction), then the structural facts, kept separate. A prediction is never a circuit fact or a wiring
+   fault.
+13. Cell BOM and datasheets (get_bom): counts are exact. Cell functions and drive strengths come from the naming
+   convention, so say so; area, leakage and capacitance numbers exist only when the tool says a liberty file is
+   loaded, and then quote them exactly as given.
+14. The structure field in the context lists inputs, outputs, control signals, blocks and datapaths computed from
+   the netlist: use it for questions about what the circuit does.
 """
 
 # ---------------------------------------------------------------------------
@@ -655,12 +880,110 @@ def _follow_up(message, history):
     return list(history[-1]) if history else []
 
 
-def plan_lookups(message, model, history=()):
-    """Tool calls for the entities a question names (history: earlier turns' lookups, oldest first).
-    Deterministic; the model can still call more tools."""
+_MODULE_RE = re.compile(r'\b(?:module|sub-?circuit|region)\s*#\s*(\d+)\b|\bmodule\s+(\d+)\b|\[M(\d+)\]', re.I)
+_TIMING_RE = re.compile(r'\b(timing|critical|longest|delays?|propagation|bottlenecks?|slow\w*|latency|depth|'
+                        r'levels?|performance|speed|fast\w*|high\s+fan-?outs?)\b', re.I)
+_POWER_RE = re.compile(r'\b(power|switching|activity|toggl\w*|energy|dynamic|leakage|glitch\w*|consum\w*)\b', re.I)
+_AREA_RE = re.compile(r'\b(area|largest|biggest|size|gate\s+counts?|concentrat\w*|logic[- ]heavy|duplicat\w*|'
+                      r'redundan\w*|simplif\w*|footprint)\b', re.I)
+_OPT_RE = re.compile(r'\b(optimi[sz]\w*|improv\w*|reduc\w*|ppa|speed\s*up|shrink)\b', re.I)
+_UNDERSTAND_RE = re.compile(r'\b(blocks?|datapaths?|data\s*paths?|control\s+signals?|inputs?\s+and\s+outputs?|'
+                            r'outputs?\s+and\s+inputs?|ports?|overview|architecture|main\s+parts?)\b', re.I)
+_SUSPICIOUS_RE = re.compile(r'\b(suspicious|suspicion|flagged|confidence)\b', re.I)
+_REGION_WORD_RE = re.compile(r'\b(regions?|modules?|sub-?circuits?|graphsaint|ml|predict\w*)\b', re.I)
+_WIRING_ISSUE_RE = re.compile(r'\b(issues?|problems?|errors?|faults?|missing|broken|unconnected|floating|dangling|'
+                              r'findings?|connectivity)\b', re.I)
+_DEICTIC_RE = re.compile(r'\b(this|that|these|those|it|its|they|them|their|same|above|previous|selected)\b', re.I)
+
+
+def _subject_from(history):
+    """The entity the conversation is about: the first entity lookup of the latest turn that had one."""
+    for turn in reversed(history or []):
+        for name, args in turn:
+            if name in ('get_gate', 'get_neighborhood') or (name in ('timing_analysis', 'optimization_suggestions')
+                                                             and args.get('gate_id') is not None):
+                return ('gate', args['gate_id'])
+            if name == 'explain_region' and args.get('module') is not None:
+                return ('module', args['module'])
+            if name == 'explain_region' and args.get('gate_id') is not None:
+                return ('gate', args['gate_id'])
+            if name == 'get_net':
+                return ('net', args['name'])
+            if name == 'explain_finding':
+                return ('finding', args['finding_id'])
+            if name == 'get_bus':
+                return ('bus', args['name'])
+            if name == 'trace_path':
+                return ('gate', args['from_id'])
+    return None
+
+
+def _focus_lookup(focus):
+    kind, val = focus
+    return {'gate': ('get_gate', {'gate_id': val}), 'net': ('get_net', {'name': val}),
+            'finding': ('explain_finding', {'finding_id': val}), 'bus': ('get_bus', {'name': val}),
+            'module': ('explain_region', {'gate_id': None, 'module': val})}.get(kind)
+
+
+def _gate_of(subject, model):
+    """A gate that stands for the subject in gate-level questions (a net's driver)."""
+    if not subject:
+        return None
+    kind, val = subject
+    if kind == 'gate':
+        return val
+    if kind == 'net':
+        e = model['nets'].get(cc._canon(model, val))
+        drv = [d['gate_id'] for d in (e['drivers'] if e else []) if 'gate_id' in d]
+        return drv[0] if drv else None
+    return None
+
+
+def _topic_calls(message, model, subject, explicit):
+    """Design-copilot lookups (timing / power / area / optimization / structure / GraphSAINT regions)."""
+    calls = []
+    gate = _gate_of(subject, model)
+    module = subject[1] if subject and subject[0] == 'module' else None
+    mods = [int(next(x for x in m.groups() if x)) for m in _MODULE_RE.finditer(message)]
+    if mods:
+        module, gate = mods[0], None
+    if mods or (_SUSPICIOUS_RE.search(message) and (module is not None or (gate is not None and
+                                                                            _REGION_WORD_RE.search(message)))):
+        calls.append(('explain_region', {'gate_id': None if module is not None else gate, 'module': module}))
+    elif _SUSPICIOUS_RE.search(message) and _REGION_WORD_RE.search(message) and not explicit:
+        calls.append(('explain_region', {'gate_id': None, 'module': None}))
+    category = None
+    if _OPT_RE.search(message):
+        category = ('performance' if _TIMING_RE.search(message) else 'power' if _POWER_RE.search(message)
+                    else 'area' if _AREA_RE.search(message) else None)
+        calls.append(('optimization_suggestions', {'category': category, 'gate_id': gate}))
+    if _TIMING_RE.search(message) and not (category and gate is None):
+        calls.append(('timing_analysis', {'gate_id': gate}))
+    if _POWER_RE.search(message) and category != 'power':
+        calls.append(('power_analysis', {}))
+    if _AREA_RE.search(message) and category != 'area':
+        blocks = {(p or 'top').split('/')[0] for p in model['hier_prefix']}
+        named = [b for b in blocks if re.search(r'(?<![\w/])' + re.escape(b) + r'(?![\w/])', message)]
+        calls.append(('area_analysis', {'block': named[0] if named else None}))
+    cell = _CELL_RE.search(message)
+    if _BOM_RE.search(message) or cell:
+        # get_bom already carries the BOM-based power/performance/area recommendations: the generic PPA tools would
+        # only repeat them and triple the prompt for a small local model
+        calls = [c for c in calls if c[0] not in ('timing_analysis', 'power_analysis', 'area_analysis',
+                                                  'optimization_suggestions')]
+        calls.insert(0, ('get_bom', {'cell': cell.group(0) if cell else None}))
+    if _UNDERSTAND_RE.search(message) and not explicit and gate is None and not calls:
+        calls.append(('circuit_overview', {}))
+    return calls
+
+
+def plan_lookups(message, model, history=(), focus=None):
+    """Tool calls for the entities a question names (history: earlier turns' lookups, oldest first; focus: a
+    (kind, value) the user just selected in the UI). Deterministic; the model can still call more tools."""
     calls = []
     gates = list(dict.fromkeys(int(x) for x in _GATE_RE.findall(message)))
     findings = list(dict.fromkeys(f'F{int(x):03d}' for x in _FINDING_RE.findall(message)))
+    blocks = {(p or 'top').split('/')[0] for p in model['hier_prefix']}
     names = []
     for m in _NAME_RE.finditer(message):
         tok = m.group(0).rstrip('?.,;:!)\'"')
@@ -675,16 +998,36 @@ def plan_lookups(message, model, history=()):
             calls.append(('get_net', {'name': tok}))
         elif tok in model['buses']:
             calls.append(('get_bus', {'name': tok}))
+        elif tok in blocks and tok != 'top' and not (_AREA_RE.search(message) or _OPT_RE.search(message)):
+            calls.append(('get_block', {'name': tok}))
+    explicit = bool(gates or findings or calls or _MODULE_RE.search(message))
+    deictic = bool(_DEICTIC_RE.search(message))
+    # the subject of the question: what it names, else (when it says "this/it") the fresh UI selection or the
+    # entity of the latest turn
+    subject = ('gate', gates[0]) if gates else ('finding', findings[0]) if findings else \
+        next(((('net' if n == 'get_net' else 'bus'), a['name']) for n, a in calls if n in ('get_net', 'get_bus')), None)
+    if subject is None and deictic:
+        subject = focus or _subject_from(history)
     if len(gates) >= 2 and _PATH_RE.search(message):
         calls.insert(0, ('trace_path', {'from_id': gates[0], 'to_id': gates[1], 'max_nodes': None}))
     else:
         calls = [('get_gate', {'gate_id': g}) for g in gates[:3]] + calls
     calls += [('explain_finding', {'finding_id': f}) for f in findings[:2]]
-    if _ISSUE_RE.search(message) and not findings:
+    topics = _topic_calls(message, model, subject, explicit)
+    if focus and deictic and not explicit:
+        fl = _focus_lookup(focus)
+        if fl and not any(c[0] == fl[0] or (c[0] == 'explain_region' and fl[0] == 'explain_region') for c in topics):
+            calls.append(fl)
+        if focus[0] == 'finding':
+            findings = [focus[1]]
+    # "why is this region suspicious?" is about the ML region, not a request for every finding
+    region_only = any(c[0] == 'explain_region' for c in topics) and not _WIRING_ISSUE_RE.search(message)
+    if _ISSUE_RE.search(message) and not findings and not region_only:
         calls.append(('list_findings', {'category': None, 'severity': None}))
+    calls += topics
     if not calls and history and _FOLLOW_UP_RE.search(message):
         calls = _follow_up(message, history)
-    if _PRED_RE.search(message):
+    if _PRED_RE.search(message) and not any(c[0] == 'explain_region' for c in calls):
         net_drivers = [d['gate_id'] for n, a in calls if n == 'get_net'
                        for d in model['nets'].get(cc._canon(model, a['name']), {}).get('drivers', []) if 'gate_id' in d]
         focus = gates[:1] or [a['gate_id'] for n, a in calls if n == 'get_gate'][:1] or \
@@ -708,6 +1051,10 @@ def _subject_gates(tool, out):
         return [p['id'] for p in out['path']]
     if tool == 'get_net':
         return [x['gate_id'] for x in out.get('drivers', []) + out.get('readers', []) if 'gate_id' in x]
+    if tool == 'timing_analysis':
+        return [out['gate']['gate_id']] if 'gate' in out else (out['paths'][0]['gates'] if out.get('paths') else [])
+    if tool == 'explain_region':
+        return out.get('gate_ids', [])[:60]
     return []
 
 
@@ -769,7 +1116,10 @@ class Assistant:
         res = self.llm.create(purpose='report', instructions=REPORT_INSTRUCTIONS,
                               input=[{'role': 'user', 'content': json.dumps(ctx, separators=(',', ':'), default=str)}],
                               schema=REPORT_SCHEMA, schema_name='circuit_report',
-                              effort=self.llm.config.effort_report, max_output_tokens=16000)
+                              effort=self.llm.config.effort_report,
+                              # a small local model can loop until the cap; real reports stay under ~1.6k tokens
+                              max_output_tokens=REPORT_MAX_OUTPUT_TOKENS_LOCAL
+                              if getattr(self.llm.config, 'base_url', '') else 16000)
         model, _ = self.service.load(ref)
         report = self._finalize_report(require_keys(res.parsed, REPORT_SCHEMA, 'report'), analysis, model)
         report['usage'] = res.usage
@@ -851,7 +1201,7 @@ class Assistant:
         }
 
     # ---- chat ---------------------------------------------------------------
-    def chat(self, session_id, ref, message):
+    def chat(self, session_id, ref, message, focus=None):
         self._require()
         if not isinstance(message, str) or not message.strip():
             raise ValueError('message must be a non-empty string')
@@ -860,10 +1210,52 @@ class Assistant:
         model, _ = self.service.load(ref)
         session = self.sessions.get(session_id, (ref.key, analysis['sha256']))
         with session['lock']:
-            return self._chat_turn(session, ref, analysis, model, message)
+            return self._chat_turn(session, ref, analysis, model, message, focus)
 
-    def _chat_turn(self, session, ref, analysis, model, message):
-        tools = CircuitTools(model, analysis)
+    def _insights(self, ref, analysis):
+        getter = getattr(self.service, 'insights', None)
+        return getter(ref, analysis) if getter else None
+
+    @staticmethod
+    def validate_focus(focus, model, analysis, insights):
+        """A UI selection {kind, id} -> (kind, value) if it names a real item, else None. Never trusted blindly."""
+        if not isinstance(focus, dict):
+            return None
+        kind, val = focus.get('kind'), focus.get('id')
+        if kind == 'gate' and isinstance(val, int) and not isinstance(val, bool) and 0 <= val < model['num_gates']:
+            return ('gate', val)
+        if kind == 'finding' and isinstance(val, str) and any(f['id'] == val for f in analysis['findings']):
+            return ('finding', val)
+        if kind == 'net' and isinstance(val, str):
+            canon = cc._canon(model, val)
+            return ('net', canon) if canon in model['nets'] else None
+        if kind == 'bus' and isinstance(val, str) and val in model['buses']:
+            return ('bus', val)
+        if kind == 'module' and isinstance(val, int) and insights is not None and 1 <= val <= len(insights.subcircuits):
+            return ('module', val)
+        return None
+
+    @staticmethod
+    def _metric_facts(insights, tools_used):
+        if insights is None:
+            return {}
+        t = insights.timing
+        facts = {'max_depth': t['max_depth'], 'path_levels': [p['levels'] for p in t['paths']],
+                 'net_fanout': insights.net_fanout, 'total_gates': insights.n,
+                 'block_gates': {b['name']: b['gates'] for b in insights.structure['blocks']},
+                 'gate_fanout': {g: {insights.gate_fanout(g), len(insights.ctx.succ[g])} for g in tools_used},
+                 'ppa_values': insights.ppa_values(),
+                 'cell_counts': {r['cell']: r['count'] for r in insights.bom['rows']}}
+        return facts
+
+    def _chat_turn(self, session, ref, analysis, model, message, focus=None):
+        insights = self._insights(ref, analysis)
+        tools = CircuitTools(model, analysis, insights)
+        focus = self.validate_focus(focus, model, analysis, insights)
+        # a selection is used once: repeated in later messages it no longer overrides the conversation's subject
+        fresh_focus = focus if focus and focus != session.get('last_focus') else None
+        if focus:
+            session['last_focus'] = focus
         with self._reports_lock:
             report = self._reports.get((ref.key, analysis['sha256'], self.llm.model))
         ctx = llm_context(analysis)
@@ -877,6 +1269,10 @@ class Assistant:
         ctx['predictions'] = {'source': analysis['prediction_source'],
                               'counts': ev['predicted_class_distribution']['counts'],
                               'per_block': {b['name']: b['predicted_classes'] for b in ev['blocks']}}
+        if insights is not None:
+            ctx['structure'] = insights.overview_summary()
+            ctx['data_availability'] = insights.data_availability()['note']
+            ctx['predictions']['modules'] = f'Module #1..#{len(insights.subcircuits)} (cite as [M1]..)'
         instructions = CHAT_INSTRUCTIONS + '\nContext:\n' + json.dumps(ctx, separators=(',', ':'), default=str)
         conv = []
         for user, answer in session['turns']:
@@ -885,13 +1281,15 @@ class Assistant:
         conv.append({'role': 'user', 'content': message})
 
         trace, calls_used, usage_total = [], 0, {'input_tokens': 0, 'output_tokens': 0, 'cost_usd': 0.0}
-        tool_texts, subject_gates, summaries = [], [], []
+        tool_texts, subject_gates, summaries, cards, gates_seen = [], [], [], [], set()
         # a local model can loop on its own output at low temperature: keep chat answers short and bounded
         max_out = CHAT_MAX_OUTPUT_TOKENS_LOCAL if getattr(self.llm.config, 'base_url', '') else 8000
-        lookups = plan_lookups(message, model, session.get('lookup_history', []))
+        lookups = plan_lookups(message, model, session.get('lookup_history', []), fresh_focus)
         for i, (name, args) in enumerate(lookups):
             out = tools.call(name, args)
             subject_gates += _subject_gates(name, out)
+            cards += out.get('cards', [])
+            gates_seen |= {v for k, v in args.items() if k in ('gate_id', 'from_id', 'to_id') and isinstance(v, int)}
             if out.get('summary'):
                 summaries.append(out['summary'])
             text = _truncate(out)
@@ -924,6 +1322,11 @@ class Assistant:
                 else:
                     calls_used += 1
                     out = tools.call(call['name'], call['arguments'])
+                    if isinstance(out, dict):
+                        cards += out.get('cards', [])
+                        args = call['arguments'] if isinstance(call['arguments'], dict) else {}
+                        gates_seen |= {v for k, v in args.items()
+                                       if k in ('gate_id', 'from_id', 'to_id') and isinstance(v, int)}
                 text = _truncate(out)
                 tool_texts.append(text)
                 trace.append({'tool': call['name'], 'arguments': call['arguments'],
@@ -932,10 +1335,16 @@ class Assistant:
         if final is None:
             raise LLMError('The assistant did not produce an answer within the tool-call budget', kind='incomplete')
 
-        g = Grounder(model, analysis['findings'], [b['name'] for b in analysis['intent'].get('blocks', [])])
+        g = Grounder(model, analysis['findings'], [b['name'] for b in analysis['intent'].get('blocks', [])],
+                     modules=len(insights.subcircuits) if insights is not None else 0)
         reply = g.clean_text(normalize_refs(final['reply'], model), 'chat.reply')
         # statements about connections, paths and predictions that the netlist contradicts are removed
         reply = g.check_claims(reply, 'chat.reply', analysis.get('predictions'), cc.CLASS_NAMES)
+        # PPA values that cannot exist here, unmeasured gains, wrong counts and predictions stated as facts
+        gates_seen |= {int(m.group(1)) for m in re.finditer(r'(?<![\w])\[?G(\d+)\b', reply or '')}
+        reply = g.check_metrics(reply, 'chat.reply', self._metric_facts(insights, {x for x in gates_seen
+                                                                                   if g.gate_ok(x)}),
+                                analysis.get('predictions'), cc.CLASS_NAMES)
         if not (reply or '').strip():
             reply = ('I could not phrase a verified answer. The circuit data says:\n' + '\n'.join(summaries)
                      if summaries else 'I could not give a verified answer to that. Please ask about a specific '
@@ -945,7 +1354,10 @@ class Assistant:
                        lambda m: f'[G{m.group(1)}]' if g.gate_ok(int(m.group(1))) else m.group(0), reply)
         hl = final['highlights']
         cited = Grounder.refs_in(reply)
-        finding_ids = g.finding_ids(list(dict.fromkeys(hl['finding_ids'] + cited['finding_ids'])), 'chat.highlights')
+        # a finding looked up automatically is what the turn is about (e.g. "how do I fix this?" on a selection)
+        looked_up = [a['finding_id'] for n, a in lookups if n == 'explain_finding']
+        finding_ids = g.finding_ids(list(dict.fromkeys(hl['finding_ids'] + cited['finding_ids'] + looked_up)),
+                                    'chat.highlights')
         # only findings this turn is about: cited in the reply, named in the question or returned by a tool
         relevant = set(cited['finding_ids']) | {f'F{int(x):03d}' for x in _FINDING_RE.findall(message)}
         relevant |= {f for t in tool_texts for f in re.findall(r'"(F\d{3,})"', t)}
@@ -965,6 +1377,28 @@ class Assistant:
             'suggested_edges': g.suggested_edges(sugg, 'chat.highlights.suggested_edges'),
         }
         self.sessions.add_turn(session, message, reply)
+        ref_gates = _ref_gates(model, [reply], nets=highlights['nets'] + [n for c in cards for n in c['nets']])
+        if insights is not None:
+            mods = set(cited['modules']) | {c['module'] for c in cards if c.get('module')}
+            ref_gates['modules'] = {str(mnum): sorted(insights.subcircuits[mnum - 1]['gate_ids'])[:200]
+                                    for mnum in sorted(mods) if g.module_ok(mnum)}
+        subject = _subject_from([lookups]) if lookups else None
         return {'session_id': session['id'], 'reply': reply, 'highlights': highlights, 'tool_trace': trace,
-                'ref_gates': _ref_gates(model, [reply], nets=highlights['nets']),
+                'ref_gates': ref_gates, 'evidence': self._clean_cards(cards, g),
+                'subject': {'kind': subject[0], 'id': subject[1]} if subject else None,
                 'dropped_refs': g.dropped, 'usage': usage_total}
+
+    @staticmethod
+    def _clean_cards(cards, g):
+        """Evidence cards are code-written, but their ids are still validated before they reach the UI."""
+        out, seen = [], set()
+        for c in cards:
+            key = (c['kind'], c['title'])
+            if key in seen:
+                continue
+            seen.add(key)
+            c = dict(c, gate_ids=[x for x in c['gate_ids'] if g.gate_ok(x)],
+                     nets=[n for n in c['nets'] if g.net_ok(n)],
+                     finding_ids=[f for f in c['finding_ids'] if g.finding_ok(f)])
+            out.append(c)
+        return out[:10]

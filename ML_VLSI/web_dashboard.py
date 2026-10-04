@@ -5,7 +5,9 @@ graph visualization, circuit schematic diagrams with identified sub-circuits,
 live GNN inference, and Layman/Professor explanations.
 """
 
+import csv
 import http.server
+import io
 import json
 import os
 import traceback
@@ -651,6 +653,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         <strong>Fan-Out:</strong> ${node.out_degree} |
         <strong>Classification:</strong> <span class="px-2 py-0.5 rounded text-white font-semibold" style="background:${node.color}">${node.class_name}</span>
       `;
+      if (window.Assistant) Assistant.onGateInspected(node.id);   // "ask about this gate" buttons
     }
 
     /* ------------------------------------------------------------
@@ -802,6 +805,7 @@ HTML_CONTENT = """<!DOCTYPE html>
           <strong>Total Gates:</strong> ${sc.size} | 
           <strong>Instances:</strong> <span class="text-slate-300 font-mono text-[10px]">${sc.gates.slice(0, 8).join(', ')}${sc.gates.length > 8 ? '...' : ''}</span>
         `;
+        if (window.Assistant) Assistant.onModuleInspected(scIdx + 1, sc.gate_ids);   // highlight + "why suspicious?"
       }
     }
 
@@ -922,6 +926,30 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'nodes': nodes,
                 'edges': edges
             })
+        elif path == '/api/bom.csv':
+            # cell bill of materials (counts from the netlist; area/leakage only if a liberty file is loaded)
+            ref = resolve_circuit(circuit_name=query.get('circuit_name', [None])[0],
+                                  upload_id=query.get('upload_id', [None])[0])
+            bom = SERVICE.insights(ref).bom
+            buf = io.StringIO()
+            w = csv.writer(buf)
+            w.writerow(['cell', 'family', 'description', 'function (naming convention)', 'drive (from name)', 'count',
+                        'share', 'blocks', 'inputs', 'outputs', 'area_each', 'area_total', 'leakage_each',
+                        'leakage_total', 'data_source'])
+            for r in bom['rows']:
+                w.writerow([r['cell'], r['family'], r['description'], r['function'] or '', r['drive_strength'],
+                            r['count'], r['share'], ' '.join(f'{k}:{v}' for k, v in r['blocks'].items()),
+                            ' '.join(r['inputs']), ' '.join(r['outputs']), r['area_each'], r.get('area_total'),
+                            r['leakage_each'], r.get('leakage_total'),
+                            'liberty' if r['library_data'] else 'cell_library.json + naming convention'])
+            body = buf.getvalue().encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/csv; charset=utf-8')
+            self.send_header('Content-Disposition', f'attachment; filename="bom_{ref.key.split(":")[-1][:60]}.csv"')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('X-Content-Type-Options', 'nosniff')
+            self.end_headers()
+            self.wfile.write(body)
         elif path == '/api/assistant/status':
             self._send_json(200, ASSISTANT.status())
         elif path.startswith('/static/'):
@@ -1036,7 +1064,17 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             session_id = data.get('session_id')
             if session_id is not None and (not isinstance(session_id, str) or len(session_id) > 64):
                 raise CircuitRefError(400, 'INVALID_SESSION', 'Invalid session_id.')
-            self._send_json(200, ASSISTANT.chat(session_id, ref, message))
+            focus = data.get('focus')
+            if focus is not None and (not isinstance(focus, dict) or len(json.dumps(focus)) > 600):
+                raise CircuitRefError(400, 'INVALID_FOCUS', 'focus must be an object {kind, id}.')
+            self._send_json(200, ASSISTANT.chat(session_id, ref, message, focus=focus))
+
+        elif path == '/api/insights':
+            # deterministic design insights (structure, structural timing/power/area, optimization candidates);
+            # works without the LLM
+            data = self._read_json()
+            ref = _ref_from(data)
+            self._send_json(200, SERVICE.insights(ref).public())
         else:
             self._send_error_json(404, 'NOT_FOUND', 'Not found.')
 

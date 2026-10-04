@@ -10,10 +10,14 @@ Pipeline: build_circuit_model -> predictions (GraphSAINT CSV or baseline GCN)
 Caches (all thread-safe LRU) are keyed by (circuit key, file sha256[, model]).
 """
 
+import glob
+import os
 import threading
 from collections import OrderedDict
 
+import cell_datasheet
 import circuit_checks as cc
+import design_insights
 import gnn_re_inference
 import intent_analyzer as ia
 from circuit_store import file_sha256
@@ -70,6 +74,7 @@ class AnalysisService:
         self.baseline_predict = baseline_predict
         self._models = LRU(16)
         self._analyses = LRU(32)
+        self._insights = LRU(16)
         self._key_locks = {}
         self._key_locks_lock = threading.Lock()
 
@@ -111,6 +116,18 @@ class AnalysisService:
             self._analyses.put(key, result)
             return dict(result, cached=False)
 
+    def insights(self, ref, analysis=None):
+        """Deterministic design-level insights (design_insights.Insights), cached per (circuit, sha)."""
+        analysis = analysis or self.analyze(ref)
+        libs = tuple((f, os.path.getmtime(f)) for f in sorted(glob.glob(os.path.join(cell_datasheet.LIB_DIR, '*.lib'))))
+        key = (ref.key, analysis['sha256'], analysis['prediction_source'], libs)   # a new .lib refreshes insights
+        hit = self._insights.get(key)
+        if hit is None:
+            model, _ = self.load(ref)
+            hit = design_insights.compute(model, analysis)
+            self._insights.put(key, hit)
+        return hit
+
     def _compute(self, ref, model, sha):
         preds, probs, source = self.predictions(ref, model)
         base = cc.run_checks(model, preds, probs, source)
@@ -150,5 +167,6 @@ class AnalysisService:
             'sha256': sha,
             'module_name': model['module_name'],
             'predictions': preds,
+            'probabilities': probs,
             'prediction_source': source,
         }

@@ -1,0 +1,698 @@
+{
+ "questions": [
+  {
+   "question": "What does this circuit do?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What are the control signals?",
+   "focus": null,
+   "status": 200,
+   "seconds": 85.7,
+   "reply": "The control signal for the circuit is `operation`. It is an input with a width of 1 bit and has a fan-out of 16. It drives the select pin of 8 multiplexer cells, which are not part of the operand buses. This signal is considered a primary input outside the operand buses.",
+   "tools": [
+    [
+     "circuit_overview",
+     {}
+    ]
+   ],
+   "evidence": [
+    "deterministic: Circuit structure (from the netlist)"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 7058,
+    "output_tokens": 150,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    32.4,
+    21.7,
+    17.1,
+    17.9,
+    24.9,
+    26.0,
+    29.6,
+    26.4,
+    19.2,
+    22.9,
+    24.7,
+    21.0,
+    42.2,
+    20.8,
+    23.2,
+    27.9,
+    23.7,
+    20.5,
+    34.5,
+    21.0,
+    20.3,
+    21.7,
+    19.9,
+    23.3,
+    23.1,
+    24.8,
+    37.1,
+    24.1,
+    22.2,
+    31.4,
+    19.4,
+    16.4,
+    19.9,
+    20.1,
+    25.4,
+    24.9,
+    21.1,
+    40.4,
+    51.8,
+    32.3,
+    28.7,
+    34.8,
+    28.0,
+    32.5,
+    27.8,
+    23.7,
+    32.1,
+    22.7,
+    31.1,
+    32.5,
+    23.4,
+    32.9,
+    34.0,
+    22.5,
+    27.2,
+    23.5,
+    29.2,
+    30.5,
+    27.9,
+    26.9,
+    28.0,
+    38.6,
+    31.6,
+    26.3,
+    35.4,
+    25.4
+   ],
+   "context_fraction": 0.431,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "names operation": true,
+    "overview tool": true
+   }
+  },
+  {
+   "question": "Explain the main blocks",
+   "focus": null,
+   "status": 502,
+   "seconds": 60.0,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What is G23?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What drives it?",
+   "focus": null,
+   "status": 502,
+   "seconds": 126.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Is that on a critical path?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "How could I optimize it?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Show the longest paths",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Which gates are timing bottlenecks?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Which signals have high fan-out?",
+   "focus": null,
+   "status": 502,
+   "seconds": 117.3,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What regions may consume more power?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Which blocks are largest?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "How could I improve performance?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What should I investigate for PPA?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Which regions does GraphSAINT find suspicious?",
+   "focus": null,
+   "status": 200,
+   "seconds": 70.4,
+   "reply": "GraphSAINT has identified suspicious regions in Modules #1, #2, and #3. These regions are predicted to contain Control Logic, based on the GraphSAINT model. However, there are no detected wiring faults or structural issues within these regions.",
+   "tools": [
+    [
+     "explain_region",
+     {
+      "gate_id": null,
+      "module": null
+     }
+    ]
+   ],
+   "evidence": [
+    "ml_prediction: Regions with model-based hints"
+   ],
+   "dropped": [],
+   "usage": {
+    "input_tokens": 6437,
+    "output_tokens": 181,
+    "cost_usd": 0.0
+   },
+   "subject": null,
+   "cpu_percent_samples": [
+    18.8,
+    20.8,
+    44.6,
+    30.2,
+    27.2,
+    31.7,
+    52.8,
+    29.7,
+    31.7,
+    29.8,
+    31.1,
+    30.3,
+    33.1,
+    28.8,
+    26.3,
+    31.9,
+    34.7,
+    48.9,
+    29.3,
+    24.7,
+    28.5,
+    31.4,
+    29.0,
+    30.2,
+    30.0,
+    42.6,
+    29.9,
+    29.5,
+    29.5,
+    30.4,
+    43.6,
+    31.8,
+    29.7,
+    26.0,
+    28.4,
+    31.6,
+    28.5,
+    25.8,
+    35.1,
+    28.8,
+    26.9,
+    30.6,
+    27.5,
+    26.4,
+    30.4,
+    26.4,
+    27.7,
+    28.6,
+    33.4,
+    27.3,
+    54.6,
+    31.8,
+    32.1,
+    32.6
+   ],
+   "context_fraction": 0.393,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "region tool": true,
+    "ML evidence labelled": true
+   }
+  },
+  {
+   "question": "What is G9999?",
+   "focus": null,
+   "status": 200,
+   "seconds": 67.9,
+   "reply": "Gate with ID 9999 does not exist in the circuit. Please check the gate ID and try again.",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 9999
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "G9999"
+   ],
+   "usage": {
+    "input_tokens": 6230,
+    "output_tokens": 83,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 9999
+   },
+   "cpu_percent_samples": [
+    29.4,
+    30.9,
+    29.2,
+    28.2,
+    31.3,
+    27.8,
+    32.0,
+    56.3,
+    32.4,
+    31.8,
+    29.6,
+    28.9,
+    22.5,
+    21.2,
+    27.7,
+    30.9,
+    33.4,
+    33.6,
+    24.9,
+    29.1,
+    32.8,
+    31.0,
+    28.8,
+    40.5,
+    40.9,
+    31.7,
+    29.2,
+    30.6,
+    29.3,
+    33.0,
+    30.8,
+    38.7,
+    44.2,
+    34.5,
+    26.6,
+    24.4,
+    32.2,
+    27.7,
+    32.4,
+    43.8,
+    47.0,
+    30.6,
+    39.6,
+    29.6,
+    32.1,
+    29.4,
+    29.7,
+    44.5,
+    29.0,
+    30.1,
+    27.1,
+    31.4
+   ],
+   "context_fraction": 0.38,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "says not found": true,
+    "no G9999 chip": true
+   }
+  },
+  {
+   "question": "What is the critical path delay in nanoseconds?",
+   "focus": null,
+   "status": 502,
+   "seconds": 60.0,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "How many milliwatts does the multiplier consume?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What is the silicon area of this circuit in square microns?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Does G23 drive G100 directly?",
+   "focus": null,
+   "status": 200,
+   "seconds": 66.9,
+   "reply": "[G23] (adder_1/intadd_0/U5) does not directly drive [G100] (multiplier_1/U139). [G23] does not have a direct connection to [G100].",
+   "tools": [
+    [
+     "get_gate",
+     {
+      "gate_id": 23
+     }
+    ],
+    [
+     "get_gate",
+     {
+      "gate_id": 100
+     }
+    ]
+   ],
+   "evidence": [],
+   "dropped": [
+    "claim: G23 drives G24, and G24 drives G100"
+   ],
+   "usage": {
+    "input_tokens": 7939,
+    "output_tokens": 108,
+    "cost_usd": 0.0
+   },
+   "subject": {
+    "kind": "gate",
+    "id": 23
+   },
+   "cpu_percent_samples": [
+    16.4,
+    16.0,
+    13.5,
+    19.0,
+    38.2,
+    20.7,
+    21.7,
+    24.7,
+    26.7,
+    27.3,
+    20.7,
+    24.7,
+    26.3,
+    20.6,
+    27.4,
+    22.5,
+    21.2,
+    22.4,
+    24.7,
+    20.9,
+    21.4,
+    36.8,
+    23.3,
+    23.6,
+    25.1,
+    20.7,
+    20.0,
+    25.6,
+    43.9,
+    26.3,
+    24.9,
+    32.2,
+    35.9,
+    28.2,
+    27.0,
+    20.9,
+    24.5,
+    24.8,
+    21.5,
+    20.5,
+    23.5,
+    19.7,
+    20.7,
+    20.7,
+    32.5,
+    27.2,
+    22.7,
+    23.3,
+    20.8,
+    21.0,
+    24.9,
+    37.2
+   ],
+   "context_fraction": 0.485,
+   "checks": {
+    "non_empty": true,
+    "no_ppa_numbers": true,
+    "no false \"G23 drives G100\" survives": true
+   }
+  },
+  {
+   "question": "Are there connectivity issues?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "How do I fix this?",
+   "focus": {
+    "kind": "finding",
+    "id": "F001"
+   },
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Why is this region suspicious?",
+   "focus": {
+    "kind": "module",
+    "id": 1
+   },
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Explain this gate",
+   "focus": {
+    "kind": "gate",
+    "id": 23
+   },
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What does this circuit do?",
+   "focus": null,
+   "status": 502,
+   "seconds": 85.6,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "Where could I reduce area?",
+   "focus": null,
+   "status": 502,
+   "seconds": 113.4,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  },
+  {
+   "question": "What is the critical path?",
+   "focus": null,
+   "status": 502,
+   "seconds": 62.1,
+   "error": {
+    "error_code": "ASSISTANT_ERROR",
+    "message": "OpenAI request timed out after 60 s"
+   }
+  }
+ ],
+ "failures": [
+  "What does this circuit do?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Explain the main blocks: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What is G23?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What drives it?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Is that on a critical path?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "How could I optimize it?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Show the longest paths: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Which gates are timing bottlenecks?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Which signals have high fan-out?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What regions may consume more power?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Which blocks are largest?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "How could I improve performance?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What should I investigate for PPA?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "hallucination: timing: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "hallucination: power: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "hallucination: area: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Are there connectivity issues?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "How do I fix this?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Why is this region suspicious?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Explain this gate: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What does this circuit do?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "Where could I reduce area?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}",
+  "What is the critical path?: HTTP 502 {'error_code': 'ASSISTANT_ERROR', 'message': 'OpenAI request timed out after 60 s'}"
+ ],
+ "metrics": {
+  "probe_wait_s": 0.1,
+  "model_load_s": 19.7,
+  "cold_first_token_wall_s": 21.89,
+  "decode_tokens_per_s": 8.9,
+  "prompt_tokens_per_s": 21.6,
+  "gpu_after_load": {
+   "nvidia_smi": "NVIDIA GeForce RTX 4050 Laptop GPU, 5616 MiB, 6141 MiB, 46 %",
+   "ollama_loaded": [
+    {
+     "name": "qwen2.5-3b-16k:latest",
+     "size_vram_mb": 2503,
+     "size_mb": 2503,
+     "context_length": 16384
+    }
+   ]
+  },
+  "first_analysis_s (incl. LLM intent)": 62.2,
+  "first_insights_s": 0.03,
+  "cached_analysis_s": 0.015,
+  "insights_12520_gates_s (incl. analysis)": 65.3,
+  "warm_chat_latency_s": {
+   "median": 70.4,
+   "p90": 85.7,
+   "min": 66.9,
+   "max": 85.7,
+   "n": 4
+  },
+  "chat_input_tokens_per_turn (summed over LLM calls)": {
+   "median": 7058,
+   "max": 7939
+  },
+  "context_window": 16384,
+  "cpu_total_percent_during_chat": {
+   "mean": 28.7,
+   "max": 56.3
+  },
+  "gpu_end": {
+   "nvidia_smi": "NVIDIA GeForce RTX 4050 Laptop GPU, 4871 MiB, 6141 MiB, 100 %",
+   "ollama_loaded": [
+    {
+     "name": "qwen2.5-3b-16k:latest",
+     "size_vram_mb": 2503,
+     "size_mb": 2503,
+     "context_length": 16384
+    }
+   ]
+  }
+ },
+ "status": {
+  "available": true,
+  "model": "qwen2.5-3b-16k",
+  "reason": null
+ },
+ "summary": {
+  "questions": 27,
+  "checks": 15,
+  "checks_passed": 15,
+  "failures": 23
+ }
+}

@@ -14,7 +14,7 @@ from llm_client import LLMClient, LLMConfig, LOCAL_API_KEY
 BASE_URL = 'http://localhost:11434/v1'
 MODEL = 'qwen2.5:3b'
 SUM_CALL = {'call_id': 'c1', 'name': 'add_numbers', 'arguments': {'a': 2, 'b': 3}}
-ENV_KEYS = ('OPENAI_API_KEY', 'OPENAI_MODEL', 'OPENAI_BASE_URL', 'OPENAI_SEND_REASONING',
+ENV_KEYS = ('OPENAI_API_KEY', 'OPENAI_TIMEOUT', 'OPENAI_MODEL', 'OPENAI_BASE_URL', 'OPENAI_SEND_REASONING',
             'OPENAI_REASONING_EFFORT_REPORT', 'OPENAI_REASONING_EFFORT_CHAT')
 
 
@@ -284,3 +284,14 @@ def test_chat_tool_loop_works_through_split():
     assert 'text' not in first and 'text' not in second and 'tools' not in third
     assert any(i.get('type') == 'function_call_output' and i['call_id'] == 'c1' for i in second['input'])
     assert out['usage']['input_tokens'] == 3000
+
+
+def test_local_timeout_defaults_longer_and_is_configurable(tmp_path, clean_env, monkeypatch):
+    env = tmp_path / '.env'
+    env.write_text(f'OPENAI_BASE_URL={BASE_URL}\nOPENAI_MODEL={MODEL}\n')
+    assert llm_client.load_config(str(env)).timeout == llm_client.LOCAL_TIMEOUT_S
+    env.write_text('OPENAI_MODEL=gpt-6-sol\n')
+    assert llm_client.load_config(str(env)).timeout == llm_client.DEFAULT_TIMEOUT_S == 60.0
+    monkeypatch.setenv('OPENAI_TIMEOUT', '240')
+    env.write_text(f'OPENAI_BASE_URL={BASE_URL}\nOPENAI_MODEL={MODEL}\n')
+    assert llm_client.load_config(str(env)).timeout == 240.0
