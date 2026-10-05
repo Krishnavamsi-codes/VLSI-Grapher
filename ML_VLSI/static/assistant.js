@@ -196,6 +196,11 @@
     }, 260);
   }
 
+  function openInsights() {
+    toggle(true);
+    setTab('insights');
+  }
+
   function setTab(tab) {
     S.tab = tab;
     document.querySelectorAll('#assistant-drawer .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -699,7 +704,7 @@
     }
   }
 
-  window.Assistant = { toggle, onCircuitLoaded, refreshStatus, setTab, focusFinding, ask, setSelection,
+  window.Assistant = { toggle, openInsights, onCircuitLoaded, refreshStatus, setTab, focusFinding, ask, setSelection,
                        onGateInspected, onModuleInspected, state: S };
   document.addEventListener('DOMContentLoaded', () => { buildDrawer(); refreshStatus(); });
 })();

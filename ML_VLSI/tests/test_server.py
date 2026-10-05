@@ -126,6 +126,7 @@ def test_upload_flow_and_na_metrics(server):
         content = f.read()
     status, _, up, _ = _request(server, 'POST', '/api/upload_circuit', {'filename': 'x.v', 'content': content})
     assert status == 200 and len(up['upload_id']) == 32 and len(up['nodes']) == 79
+    assert up['display_name'] == 'x.v'
     try:
         status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'upload_id': up['upload_id']})
         assert status == 200

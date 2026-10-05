@@ -3,7 +3,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #030712;
+  background-color: #0b1120;
 }
 
 code, pre {
@@ -12,23 +12,28 @@ code, pre {
 
 #network-container, #schematic-canvas-container {
   height: 520px;
-  background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
-  border-radius: 0.875rem;
+  background: #0b1120;
+  border-radius: 0.5rem;
 }
 
 .glass-card {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111827;
+  backdrop-filter: none;
+  border: 1px solid #263244;
 }
 
 .glass-card:hover {
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: #3b4a61;
 }
 
 .glow-indigo {
-  box-shadow: 0 0 30px -5px rgba(99, 102, 241, 0.35);
+  box-shadow: none;
 }
+
+/* Keep the information hierarchy, without the gradients and neon effects. */
+.bg-gradient-to-r, .bg-gradient-to-tr { background-image: none !important; }
+.bg-gradient-to-r { background-color: #334155 !important; }
+.shadow-xl, .shadow-2xl, .shadow-lg { box-shadow: none !important; }
 
 ::-webkit-scrollbar {
   width: 6px;

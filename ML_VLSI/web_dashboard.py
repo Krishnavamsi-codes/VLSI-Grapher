@@ -78,29 +78,34 @@ HTML_CONTENT = """<!DOCTYPE html>
 </head>
 <body class="text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
   <!-- Top Navigation Bar -->
-  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-50 px-6 py-3.5 flex items-center justify-between">
+  <header class="border-b border-slate-800 sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-cyan-400 flex items-center justify-center font-bold text-lg shadow-lg glow-indigo">
+      <div class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-lg">
         <i class="fa-solid fa-microchip text-white"></i>
       </div>
       <div>
         <div class="flex items-center space-x-2">
           <h1 class="text-base font-bold text-white tracking-wide">GNN-RE Studio</h1>
-          <span class="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">IEEE TCAD</span>
+          <span class="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Research prototype</span>
         </div>
         <p class="text-[11px] text-slate-400">Netlist-to-Graph & Sub-Circuit Boundary Recognition Engine</p>
       </div>
     </div>
-    <button id="assistant-toggle" onclick="Assistant.toggle()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-xs font-semibold hover:bg-indigo-600/40 transition">
-      <span id="assistant-dot" class="status-dot off"></span><i class="fa-solid fa-robot"></i> Assistant
-    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="Assistant.openInsights()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 text-xs font-semibold hover:bg-slate-800 transition">
+        <i class="fa-solid fa-list-check"></i> BOM &amp; design insights
+      </button>
+      <button id="assistant-toggle" onclick="Assistant.toggle()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-900 text-xs font-semibold hover:bg-white transition">
+        <span id="assistant-dot" class="status-dot off"></span><i class="fa-solid fa-robot"></i> Assistant
+      </button>
+    </div>
   </header>
 
   <!-- Main Container -->
   <main class="max-w-[1600px] mx-auto px-6 py-5 space-y-5">
     
     <!-- TOP BANNER: Active Netlist Overview & Quick Stats -->
-    <div id="active-circuit-banner" class="glass-card rounded-2xl p-4 border border-indigo-500/30 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950/60 shadow-xl flex flex-wrap items-center justify-between gap-4">
+    <div id="active-circuit-banner" class="glass-card rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center space-x-3.5">
         <div class="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-inner">
           <i class="fa-solid fa-file-code text-cyan-400"></i>
@@ -415,7 +420,8 @@ HTML_CONTENT = """<!DOCTYPE html>
       // Update top active circuit banner & stats
       const bannerName = document.getElementById('active-circuit-name');
       const tag = document.getElementById('active-source-tag');
-      const displayName = data.display_name || (currentSource.circuit_name ? currentSource.circuit_name.replace('.v','') : 'Custom Uploaded Circuit');
+        const displayName = data.display_name || currentSource.display_name ||
+          (currentSource.circuit_name ? currentSource.circuit_name.replace('.v','') : 'Custom Uploaded Circuit');
       
       if (bannerName) bannerName.textContent = displayName;
       if (tag) {
@@ -545,7 +551,7 @@ HTML_CONTENT = """<!DOCTYPE html>
       try {
         const text = await file.text();
         const data = await postJson('/api/upload_circuit', { filename: file.name, content: text });
-        currentSource = { upload_id: data.upload_id };
+        currentSource = { upload_id: data.upload_id, display_name: data.display_name || file.name };
         setCircuitData(data);
       } catch (err) {
         showError(err.message);
@@ -1059,6 +1065,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         if path == '/api/upload_circuit':
             data = self._read_json()
             content = data.get('content')
+            raw_name = str(data.get('filename') or '')
+            display_name = raw_name.replace('\\', '/').rsplit('/', 1)[-1].strip()[:128] or 'Uploaded netlist.v'
             circuit_store.check_upload_size(content)
             parsed = parse_verilog_text(content)
             if parsed is None:
@@ -1069,6 +1077,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             nodes, edges, feats, labels = build_circuit_graph(parsed)
             self._send_json(200, {
                 'upload_id': upload_id,
+                'display_name': display_name,
                 'module_name': parsed['module_name'],
                 'source': 'upload',
                 'nodes': nodes,
