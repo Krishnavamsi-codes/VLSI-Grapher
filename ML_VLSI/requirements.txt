@@ -11,6 +11,6 @@ pytest>=7.4
 # networkx>=3.3
 # matplotlib>=3.8
 
-# Assistant (Phase B, not used yet):
-# openai
-# python-dotenv
+# Assistant
+openai>=1.0
+python-dotenv>=1.0

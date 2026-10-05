@@ -100,7 +100,7 @@ def test_circuit_listing_has_demo_group_and_no_uploads(server):
     status, _, parsed, _ = _request(server, 'GET', '/api/circuits')
     assert status == 200
     assert len(parsed['circuits']) == 37
-    assert len(parsed['demo_circuits']) == 3
+    assert len(parsed['demo_circuits']) == 6
     assert not any('Upload' in c for c in parsed['circuits'] + parsed['demo_circuits'])
 
 
@@ -126,6 +126,7 @@ def test_upload_flow_and_na_metrics(server):
         content = f.read()
     status, _, up, _ = _request(server, 'POST', '/api/upload_circuit', {'filename': 'x.v', 'content': content})
     assert status == 200 and len(up['upload_id']) == 32 and len(up['nodes']) == 79
+    assert up['display_name'] == 'x.v'
     try:
         status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'upload_id': up['upload_id']})
         assert status == 200

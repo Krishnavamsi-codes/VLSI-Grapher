@@ -1,7 +1,7 @@
 """build_circuit_model: buses, PI/PO, assign aliases, constants, missing pins, fallbacks."""
 import pytest
 
-from netlist_graph_engine import NetlistParseError, build_circuit_model, pin_direction
+from netlist_graph_engine import NetlistParseError, build_circuit_model, parse_verilog_text, pin_direction
 
 NETLIST = r"""
 // synthetic test netlist
@@ -77,6 +77,16 @@ def test_unknown_cell_fallback(model):
 def test_parse_error_without_module():
     with pytest.raises(NetlistParseError):
         build_circuit_model(text='NAND2_X1M_A9TH U1 ( .A(a), .B(b), .Y(y) );')
+
+
+def test_behavioral_begin_is_not_mistaken_for_a_gate():
+    rtl = '''module mux(input a, b, sel, output reg y);
+      always @(*) begin
+        if (sel) y = a;
+        else y = b;
+      end
+    endmodule'''
+    assert parse_verilog_text(rtl)['gates'] == []
 
 
 def test_expression_assign_is_flagged_not_dropped():

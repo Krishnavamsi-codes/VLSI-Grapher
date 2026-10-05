@@ -32,8 +32,10 @@ MAX_TURNS = 20
 MAX_SESSIONS = 100
 SESSION_TTL_S = 3600
 MAX_MESSAGE_CHARS = 2000
-CHAT_MAX_OUTPUT_TOKENS_LOCAL = 1024
-REPORT_MAX_OUTPUT_TOKENS_LOCAL = 4096
+# Local models can produce a useful, grounded answer quickly when their output
+# is bounded. Detailed evidence remains available through deterministic tabs.
+CHAT_MAX_OUTPUT_TOKENS_LOCAL = 384
+REPORT_MAX_OUTPUT_TOKENS_LOCAL = 768
 SUGGESTION_LABEL = '// Suggestion, not applied'
 
 RULES = """Hard rules:
@@ -820,6 +822,10 @@ How to answer:
    bus name, get_net for one bit such as X[3], list_findings for problems). Never invent a replacement.
 3. Answer the question asked in 1-5 short sentences or a short list of plain English. Do not bring up findings or
    predictions that the question is not about.
+   For "what does this circuit do?" or "explain the main blocks", begin with the plain-English "In simple terms"
+   sentence from circuit_overview. Then explain the signal flow in no more than three bullets. Do not lead with
+   gate counts, port widths, control-pin counts, or a heading such as "Inputs"/"Blocks"; those are supporting
+   details, not the explanation. State only a 0/1 control mapping if a tool result explicitly proves it.
 4. Refer to items only as [G23], [N:<net>], [B:<bus>] or [F001], and only for items that appear in the context or
    tool results. Plain names are fine too.
 5. Say "GraphSAINT predicts" (or "the baseline model predicts") for predictions; state checked facts directly.
