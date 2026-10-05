@@ -100,7 +100,7 @@ def test_circuit_listing_has_demo_group_and_no_uploads(server):
     status, _, parsed, _ = _request(server, 'GET', '/api/circuits')
     assert status == 200
     assert len(parsed['circuits']) == 37
-    assert len(parsed['demo_circuits']) == 3
+    assert len(parsed['demo_circuits']) == 6
     assert not any('Upload' in c for c in parsed['circuits'] + parsed['demo_circuits'])
 
 

@@ -103,12 +103,13 @@ def test_findings_have_contract_fields():
 def test_demo_faults_are_detected():
     with open(DEMO_MANIFEST, encoding='utf-8') as fh:
         manifest = json.load(fh)
-    assert len(manifest) == 3
+    assert len(manifest) == 6
     for name, meta in manifest.items():
         out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
         assert any(f['check'] == meta['expected_check'] for f in out['findings']), name
-        edges = [e for f in out['findings'] for e in f['suggested_edges']]
-        assert any(_edge_matches(e, meta['expected_edge']) for e in edges), name
+        if 'expected_edge' in meta:
+            edges = [e for f in out['findings'] for e in f['suggested_edges']]
+            assert any(_edge_matches(e, meta['expected_edge']) for e in edges), name
 
 
 @pytest.mark.slow

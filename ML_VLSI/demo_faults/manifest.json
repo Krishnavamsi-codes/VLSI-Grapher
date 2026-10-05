@@ -1,4 +1,22 @@
 {
+ "Demo_01_Floating_Input__small.v": {
+  "base": null,
+  "fault": "presentation_floating_input",
+  "description": "Small presentation demo: U1 reads missing_signal, a net with no driver. Expected result: floating_net error.",
+  "expected_check": "floating_net"
+ },
+ "Demo_02_Two_Drivers__small.v": {
+  "base": null,
+  "fault": "presentation_two_drivers",
+  "description": "Small presentation demo: U1 and U2 both drive shared_net. Expected result: multi_driver error.",
+  "expected_check": "multi_driver"
+ },
+ "Demo_03_Dead_Logic__small.v": {
+  "base": null,
+  "fault": "presentation_dead_logic",
+  "description": "Small presentation demo: U2 and U3 cannot affect y. Expected result: no_path_to_po warning.",
+  "expected_check": "no_path_to_po"
+ },
  "Demo_cut_carry__Validate_add_mul_8_bit_Syn_65nm.v": {
   "base": "Validate_add_mul_8_bit_Syn_65nm.v",
   "fault": "cut_carry",
