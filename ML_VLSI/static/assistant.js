@@ -89,12 +89,14 @@
       <div class="drawer-tabs">
         <button data-tab="overview" class="tab active">Overview</button>
         <button data-tab="issues" class="tab">Issues <span id="issues-count" class="count"></span></button>
+        <button data-tab="bom" class="tab">BOM</button>
         <button data-tab="insights" class="tab">Insights</button>
         <button data-tab="chat" class="tab">Chat</button>
       </div>
       <div class="drawer-body">
         <section id="tab-overview"></section>
         <section id="tab-issues" class="hidden"></section>
+        <section id="tab-bom" class="hidden"></section>
         <section id="tab-insights" class="hidden"></section>
         <section id="tab-chat" class="hidden">
           <div id="chat-log" class="chat-log"></div>
@@ -196,15 +198,15 @@
     }, 260);
   }
 
-  function openInsights() {
+  function openBom() {
     toggle(true);
-    setTab('insights');
+    setTab('bom');
   }
 
   function setTab(tab) {
     S.tab = tab;
     document.querySelectorAll('#assistant-drawer .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    ['overview', 'issues', 'insights', 'chat'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
+    ['overview', 'issues', 'bom', 'insights', 'chat'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== tab));
   }
 
   // ----------------------------------------------------------------- status
@@ -343,7 +345,7 @@
     if (!b) return '';
     const lib = b.library_loaded;
     const q = new URLSearchParams(S.source).toString();
-    const rows = b.rows.slice(0, 15).map((r, i) => `
+    const rows = b.rows.slice(0, 6).map((r, i) => `
       <tr class="bom-row" data-bom="${i}"><td class="mono">${esc(r.cell)}</td><td>${r.count}</td>
         <td>${r.drive_strength == null ? '?' : 'X' + r.drive_strength}</td>
         <td>${lib ? esc(r.area_total == null ? '-' : r.area_total) : esc(r.description)}</td></tr>
@@ -355,16 +357,16 @@
         <div class="ask-row"><button class="mini" data-bomhl="${i}"><i class="fa-solid fa-location-crosshairs"></i> Highlight instances</button>
           ${askButtons([['Ask about this cell', `Show the datasheet for ${r.cell} and how it is used in this circuit`, '', '']])}</div>
       </td></tr>`).join('');
-    const drive = Object.entries(b.drive_mix).map(([k, v]) => ({ label: k, value: v }));
-    return `<div class="card"><div class="flex justify-between"><span class="label">Cell BOM &amp; datasheets</span>${basisChip('deterministic')}</div>
+    return `<div class="card"><div class="flex justify-between"><span class="label">Bill of materials</span>${basisChip('deterministic')}</div>
+      <div class="bom-summary"><div><b>${b.totals.instances}</b><span>instances</span></div><div><b>${b.totals.cell_types}</b><span>cell types</span></div><div><b>${b.totals.families}</b><span>families</span></div></div>
       <div class="ins-line small">${b.totals.instances} cells · ${b.totals.cell_types} cell types · ${b.totals.families} families
         ${b.totals.area != null ? ` · total cell area <b>${b.totals.area}</b> (library units)` : ''}
         ${b.totals.leakage_power != null ? ` · leakage <b>${b.totals.leakage_power}</b> (${esc(b.units.leakage_power)})` : ''}</div>
-      <div class="muted small">${esc(b.note)}</div>
-      <table class="bom"><thead><tr><th>Cell</th><th>Qty</th><th>Drive</th><th>${lib ? 'Area total' : 'Type'}</th></tr></thead><tbody>${rows}</tbody></table>
-      ${b.rows.length > 15 ? `<div class="muted small">+ ${b.rows.length - 15} more cell types in the CSV</div>` : ''}
-      ${barChart('Drive strength mix (from cell names)', drive, { unit: 'cells' })}
-      ${b.cells_without_datasheet.length ? `<div class="unavail small">No datasheet entry for: ${esc(b.cells_without_datasheet.join(', '))}</div>` : ''}
+      <details><summary>Cell breakdown — top ${Math.min(b.rows.length, 6)} of ${b.rows.length} types</summary>
+        <table class="bom"><thead><tr><th>Cell</th><th>Qty</th><th>Drive</th><th>${lib ? 'Area total' : 'Type'}</th></tr></thead><tbody>${rows}</tbody></table>
+        ${b.rows.length > 6 ? `<div class="muted small">The complete list is in the CSV export.</div>` : ''}
+      </details>
+      <details><summary>Data notes</summary><div class="muted small">${esc(b.note)}</div>${b.cells_without_datasheet.length ? `<div class="unavail small">No datasheet entry for: ${esc(b.cells_without_datasheet.join(', '))}</div>` : ''}</details>
       <div class="ask-row"><a class="mini" href="/api/bom.csv?${esc(q)}" download><i class="fa-solid fa-file-csv"></i> Download BOM (CSV)</a>
         ${askButtons([['BOM PPA recommendations', 'Give power, performance and area recommendations based on the cell BOM', '', '']])}</div></div>`;
   }
@@ -465,7 +467,15 @@
   }
 
   // ----------------------------------------------------------------- overview
-  function renderAll() { renderOverview(); renderIssues(); renderInsights(); renderStarters(); renderChatAvailability(); }
+  function renderBom() {
+    const el = $('tab-bom');
+    if (!el) return;
+    if (!S.source) { el.innerHTML = '<p class="muted">Load a circuit to view its bill of materials.</p>'; return; }
+    if (!S.insights) { el.innerHTML = '<p class="muted"><i class="fa-solid fa-spinner fa-spin"></i> Building the BOM...</p>'; return; }
+    el.innerHTML = bomHtml(S.insights);
+  }
+
+  function renderAll() { renderOverview(); renderIssues(); renderBom(); renderInsights(); renderStarters(); renderChatAvailability(); }
 
   function healthOf() {
     if (S.report) return S.report.health;
@@ -704,7 +714,7 @@
     }
   }
 
-  window.Assistant = { toggle, openInsights, onCircuitLoaded, refreshStatus, setTab, focusFinding, ask, setSelection,
+  window.Assistant = { toggle, openBom, onCircuitLoaded, refreshStatus, setTab, focusFinding, ask, setSelection,
                        onGateInspected, onModuleInspected, state: S };
   document.addEventListener('DOMContentLoaded', () => { buildDrawer(); refreshStatus(); });
 })();

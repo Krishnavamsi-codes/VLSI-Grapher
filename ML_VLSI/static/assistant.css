@@ -162,6 +162,10 @@ details summary { cursor: pointer; color: #fdba74; font-weight: 600; margin: 10p
 .chart .cv { font-size: 8px; fill: #cbd5e1; }
 .chart rect:hover { opacity: .75; }
 table.bom { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+.bom-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+.bom-summary div { background: #0f172a; border: 1px solid #1e293b; border-radius: 7px; padding: 7px; text-align: center; }
+.bom-summary b { display: block; color: #e2e8f0; font-size: 15px; }
+.bom-summary span { color: #94a3b8; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
 table.bom th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #1e293b; padding: 3px 4px; }
 table.bom td { padding: 3px 4px; border-bottom: 1px dashed rgba(255,255,255,.05); vertical-align: top; }
 table.bom .mono { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #e2e8f0; }

@@ -92,8 +92,8 @@ HTML_CONTENT = """<!DOCTYPE html>
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <button onclick="Assistant.openInsights()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 text-xs font-semibold hover:bg-slate-800 transition">
-        <i class="fa-solid fa-list-check"></i> BOM &amp; design insights
+      <button onclick="Assistant.openBom()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 text-xs font-semibold hover:bg-slate-800 transition">
+        <i class="fa-solid fa-list-check"></i> Bill of materials
       </button>
       <button id="assistant-toggle" onclick="Assistant.toggle()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-900 text-xs font-semibold hover:bg-white transition">
         <span id="assistant-dot" class="status-dot off"></span><i class="fa-solid fa-robot"></i> Assistant
