@@ -81,6 +81,7 @@ class Insights:
         self._levels()
         self._fanout()
         self.structure = self._structure()
+        self.structure['plain_purpose'] = self._plain_language_purpose(self.structure)
         self.timing = self._timing()
         self.area = self._area()
         self.power = self._power()
@@ -663,10 +664,25 @@ class Insights:
         return out
 
     # ------------------------------------------------------------------ text summaries (code-written)
+    def _plain_language_purpose(self, structure):
+        """A short, non-jargon-first explanation for the dashboard and assistant."""
+        roles = {b.get('inferred_role') for b in structure['blocks']}
+        operand_inputs = [p for p in structure['inputs'] if p['width'] > 1]
+        if {'adder', 'multiplier'} <= roles and structure['control_signals'] and len(operand_inputs) >= 2 and structure['outputs']:
+            left, right = operand_inputs[:2]
+            result = structure['outputs'][0]
+            control = structure['control_signals'][0]['net']
+            return (f"This is an add-or-multiply unit. It takes {left['name']} and {right['name']}, calculates "
+                    f"both answers in parallel, then {control} selects which answer reaches {result['name']}. "
+                    f"The netlist shows that it selects a result, but does not by itself prove which value of "
+                    f"{control} means add or multiply.")
+        return self.a['intent'].get('summary_for_layman') or 'The circuit purpose is not yet known.'
+
     def overview_summary(self):
         s = self.structure
         it = self.a['intent']
-        lines = [f"Inferred function: {it.get('intended_function')} (confidence {it.get('confidence')}, "
+        lines = ['In simple terms: ' + s['plain_purpose'],
+                 f"Inferred function: {it.get('intended_function')} (confidence {it.get('confidence')}, "
                  f"source {it.get('source')}; derived from dependency cones and names, not verified design data).",
                  'Inputs: ' + ', '.join(f"{p['name']}[{p['width']}]" if p['width'] > 1 else p['name'] for p in s['inputs']),
                  'Outputs: ' + ', '.join(f"{p['name']}[{p['width']}]" if p['width'] > 1 else p['name'] for p in s['outputs'])]

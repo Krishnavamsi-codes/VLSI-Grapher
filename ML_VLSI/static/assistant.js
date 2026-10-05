@@ -410,6 +410,7 @@
       ${chartsHtml(I)}
       ${bomHtml(I)}
       <div class="card"><div class="flex justify-between"><span class="label">Structure</span>${basisChip('deterministic')}</div>
+        <div class="ins-line"><b>What it does:</b> ${esc(s.plain_purpose || 'No plain-language function has been inferred yet.')}</div>
         <div class="ins-line"><b>Inputs:</b> ${s.inputs.map(x => esc(x.name) + (x.width > 1 ? `[${x.width}]` : '')).join(', ')}</div>
         <div class="ins-line"><b>Outputs:</b> ${s.outputs.map(x => esc(x.name) + (x.width > 1 ? `[${x.width}]` : '')).join(', ')}</div>
         <div class="ins-line"><b>Control signals:</b> ${s.control_signals.length ? s.control_signals.slice(0, 4).map(c =>

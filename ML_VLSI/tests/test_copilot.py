@@ -82,6 +82,8 @@ def test_overview_is_grounded_in_the_netlist(clean):
     _, _, model, a, ins, tools = clean
     out = tools.call('circuit_overview', {})
     s = out['summary']
+    assert s.startswith('In simple terms: This is an add-or-multiply unit.')
+    assert 'operation selects which answer reaches Result' in s
     assert 'Inputs: a[8], b[8], operation' in s and 'Outputs: Result[16]' in s
     assert 'operation (drives the select pin of 8 multiplexer cell(s)' in s
     assert 'multiplier_1 213 gates (multiplier)' in s and 'adder_1 10 gates (adder)' in s
