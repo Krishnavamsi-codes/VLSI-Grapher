@@ -486,7 +486,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         names.forEach(c => {
           const opt = document.createElement('option');
           opt.value = c;
-          opt.textContent = c.replace('.v', '');
+          opt.textContent = c.replace('.v', '').replace(/^Demo_\\d+_/, '').replace(/__/g, ' - ').replace(/_/g, ' ');
           group.appendChild(opt);
         });
         select.appendChild(group);

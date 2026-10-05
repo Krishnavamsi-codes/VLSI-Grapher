@@ -1,4 +1,16 @@
 {
+ "Demo_04_Full_Adder__Correct.v": {
+  "base": null,
+  "fault": "presentation_full_adder_correct",
+  "description": "Correct 1-bit full adder. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
+ "Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v": {
+  "base": null,
+  "fault": "presentation_full_adder_wrong",
+  "description": "Broken 1-bit full adder: the sum XOR reads missing_cin instead of cin. Expected result: floating_net error.",
+  "expected_check": "floating_net"
+ },
  "Demo_01_Floating_Input__small.v": {
   "base": null,
   "fault": "presentation_floating_input",

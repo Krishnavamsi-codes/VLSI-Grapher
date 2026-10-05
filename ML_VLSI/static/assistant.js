@@ -307,6 +307,18 @@
   // ----------------------------------------------------------------- insights (deterministic; no LLM)
   const gchips = ids => (ids || []).map(g => `[G${g}]`).join(' -> ');
   const gref = text => String(text || '').replace(/(?<![\w\[])G(\d+)\b/g, '[G$1]');   // plain G12 -> chip
+  function laymanFinding(f) {
+    const net = (f.nets || [])[0] || 'this signal';
+    const messages = {
+      floating_net: `The wire "${net}" is being used, but it is not connected to anything that supplies a 0 or 1. Think of it as an unplugged wire: this part of the circuit cannot produce a reliable answer. Connect it to the intended source.`,
+      multi_driver: `Two parts of the circuit are trying to control the same wire "${net}". That is like two people steering one car at once. Keep only the intended driver or add proper selection logic.`,
+      no_path_to_po: 'This logic is doing work, but its result never reaches an output. It is wasted circuitry and may mean a connection was missed.',
+      dangling_output: `A gate creates "${net}", but nothing uses it. Check whether that output should feed another gate or be removed.`,
+      missing_pin: 'A required gate connection is empty. The gate cannot perform its intended logic until that pin is wired correctly.',
+      undriven_po: `The output "${net}" has no source, so the circuit cannot reliably produce a value there.`
+    };
+    return messages[f.check] || 'The tool found a connection pattern that needs an engineer to inspect it.';
+  }
 
   // small inline SVG bar chart: rows = [{label, value, hl}], vertical bars; values shown on hover and above bars
   function barChart(title, rows, opts) {
@@ -573,6 +585,7 @@
     const fHtml = f => `
       <div class="finding sev-border-${esc(f.severity)}" data-finding="${esc(f.id)}">
         <div class="item-head">${sevBadge(f.severity)} ${certChip(f.certainty)} <b>${esc(f.id)}</b> <span class="muted">${esc(f.check)}</span></div>
+        <div class="small"><b>In simple terms:</b> ${esc(laymanFinding(f))}</div>
         <div class="small">${esc(f.evidence)}</div>
         ${f.suggested_edges && f.suggested_edges.length ? `<div class="small sugg"><i class="fa-solid fa-link-slash"></i> ${f.suggested_edges.length} suggested connection(s)${f.suggested_edges.some(e => e.ambiguous) ? ' · ambiguous' : ''}</div>` : ''}
         <div class="ask-row">${askButtons(f.category === 'gnn_suspicion'
