@@ -32,8 +32,10 @@ MAX_TURNS = 20
 MAX_SESSIONS = 100
 SESSION_TTL_S = 3600
 MAX_MESSAGE_CHARS = 2000
-CHAT_MAX_OUTPUT_TOKENS_LOCAL = 1024
-REPORT_MAX_OUTPUT_TOKENS_LOCAL = 4096
+# Local models can produce a useful, grounded answer quickly when their output
+# is bounded. Detailed evidence remains available through deterministic tabs.
+CHAT_MAX_OUTPUT_TOKENS_LOCAL = 384
+REPORT_MAX_OUTPUT_TOKENS_LOCAL = 768
 SUGGESTION_LABEL = '// Suggestion, not applied'
 
 RULES = """Hard rules:

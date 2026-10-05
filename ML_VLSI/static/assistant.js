@@ -224,7 +224,6 @@
     const t = $('assistant-status-text');
     if (t) t.textContent = S.status.available ? S.status.model : 'unavailable';
     if (!S.status.available && /checking/.test(S.status.reason || '')) setTimeout(refreshStatus, 3000);
-    else if (S.status.available && S.analysis && !S.report && !S.reportError) loadReport(false);
     renderOverview();
     renderChatAvailability();
   }
@@ -259,7 +258,9 @@
       if (token === S.token) { S.analysisBusy = false; renderAll(); }
     }
     if (token === S.token && S.analysis) loadInsights();
-    if (token === S.token && S.analysis && S.status.available) loadReport(regenerate);
+    // Analysis and insights are deterministic and load immediately. The
+    // optional LLM report is user-triggered so loading a circuit never queues
+    // a long local-model request in the background.
   }
 
   async function loadInsights() {
@@ -507,6 +508,7 @@
         ${droppedNote(S.report.dropped_refs)}`;
     else if (!S.status.available) reportHtml = `<div class="unavail">Assistant unavailable: ${esc(S.status.reason || S.reportError || '')}. Detection and overlays still work.</div>`;
     else if (S.reportError) reportHtml = `<div class="unavail">Report failed: ${esc(S.reportError)}</div>`;
+    else if (S.status.available) reportHtml = '<p class="muted small">Generate a concise assistant summary when you need it. The circuit checks and BOM are already available.</p>';
     else reportHtml = '';
     el.innerHTML = `
       <div class="card">
@@ -522,7 +524,8 @@
       <div class="card">
         <div class="flex justify-between items-center">
           <span class="health health-${esc(h)}">${esc(hLabel)}</span>
-          <button id="regen-btn" class="regen" ${S.reportBusy || S.analysisBusy ? 'disabled' : ''}><i class="fa-solid fa-rotate"></i> Regenerate</button>
+          <div class="flex gap-2"><button id="generate-report-btn" class="regen" ${S.reportBusy || S.analysisBusy || !S.status.available ? 'disabled' : ''}><i class="fa-solid fa-wand-magic-sparkles"></i> Generate summary</button>
+          <button id="regen-btn" class="regen" ${S.reportBusy || S.analysisBusy ? 'disabled' : ''} title="Refresh deterministic analysis"><i class="fa-solid fa-rotate"></i></button></div>
         </div>
         <div class="muted small">${S.analysis.stats.errors} errors · ${S.analysis.stats.warnings} warnings · ${S.analysis.stats.infos} info</div>
         ${reportHtml}
@@ -530,6 +533,8 @@
       <div class="notes">${(S.analysis.honesty_notes || []).map(n => `<div><i class="fa-solid fa-circle-info"></i> ${esc(n)}</div>`).join('')}</div>`;
     const rb = $('regen-btn');
     if (rb) rb.addEventListener('click', regenerate);
+    const grb = $('generate-report-btn');
+    if (grb) grb.addEventListener('click', () => loadReport(false));
   }
 
   // ----------------------------------------------------------------- issues
