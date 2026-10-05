@@ -53,6 +53,17 @@ The five classes are Adder, Multiplier, Control Logic, Subtractor, and Comparato
 
 Qwen runs locally through Ollama at `http://localhost:11434/v1`. It is used for natural-language explanation, not for deciding electrical truth. The GPU-backed local model is deliberately asked only when the user chats or clicks **Generate summary**; deterministic parsing, checks, BOM, and insights remain immediate. This prevents a large background report from delaying normal UI use.
 
+### Local Qwen setup
+
+The assistant status dot is on only after the local Ollama server and the configured model respond to the startup probe. On a new machine:
+
+1. Install Ollama from [ollama.com](https://ollama.com), then start the Ollama app or run `ollama serve`.
+2. Run `ollama pull qwen2.5:3b` once to download the model.
+3. Copy `.env.example` to `.env` in the `ML_VLSI` folder. Keep the default `OPENAI_BASE_URL=http://localhost:11434/v1` and `OPENAI_MODEL=qwen2.5:3b` unless using a different local model.
+4. Start `web_dashboard.py` and check the Assistant status. If it is unavailable, the UI/API reports whether Ollama cannot be reached or the selected model is missing.
+
+The circuit checks, issue panel, verified repair overlays, and report generation remain available when Qwen is offline. Qwen only phrases circuit evidence; it never decides the repair connection.
+
 ## Training-data plan
 
 The public mini-project repositories are useful **RTL source corpora**, not ready-made classifier data. To use them responsibly:
