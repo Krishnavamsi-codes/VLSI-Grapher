@@ -36,6 +36,19 @@ _cell_library = None
 
 # Standard Verilog primitives
 VERILOG_PRIMITIVES = {'nand', 'nor', 'and', 'or', 'xor', 'xnor', 'not', 'inv', 'buf'}
+# These words can precede parenthesized expressions in RTL (for example,
+# ``begin if (enable)``). They are language constructs, never cell instances.
+VERILOG_NON_INSTANCE_KEYWORDS = frozenset({
+    'always', 'always_comb', 'always_ff', 'always_latch', 'assign', 'begin', 'end',
+    'case', 'casex', 'casez', 'endcase', 'if', 'else', 'for', 'foreach', 'while',
+    'repeat', 'forever', 'initial', 'generate', 'endgenerate', 'function', 'endfunction',
+    'task', 'endtask', 'module', 'endmodule', 'input', 'output', 'inout', 'wire',
+    'reg', 'logic', 'parameter', 'localparam', 'genvar', 'integer', 'time',
+})
+
+
+def _is_non_instance_token(token):
+    return token.lower() in VERILOG_NON_INSTANCE_KEYWORDS
 
 _GATE_RE = re.compile(r'(\w+)\s+(?:([\w\\/]+)\s*)?\((.*?)\);', re.DOTALL)
 _PIN_RE = re.compile(r'\.(\w+)\s*\(\s*([^)]+)\s*\)')
@@ -166,7 +179,7 @@ def parse_verilog_text(content):
         inst_name = (match.group(2) or '').strip()
         port_map_str = match.group(3)
         
-        if cell_type in ['module', 'input', 'output', 'wire', 'reg', 'assign', 'endmodule']:
+        if _is_non_instance_token(cell_type):
             continue
             
         if not inst_name:
@@ -439,7 +452,7 @@ def build_circuit_model(path=None, text=None):
     # here and guard the synthetic gates below instead of indexing the two
     # collections as if they were identical.
     gate_matches = [m for m in _GATE_RE.finditer(content)
-                    if m.group(1) not in ('module', 'input', 'output', 'wire', 'reg', 'assign', 'endmodule')]
+                    if not _is_non_instance_token(m.group(1))]
     for gid, gate in enumerate(gates):
         cell = gate['cell_type']
         pins, dirs = {}, {}

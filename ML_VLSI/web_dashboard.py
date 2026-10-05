@@ -1072,6 +1072,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             if parsed is None:
                 raise NetlistParseError('No "module <name> ( ... );" declaration found.')
             if not parsed['gates']:
+                if re.search(r'\b(always|always_comb|always_ff|initial|begin|case)\b', content, re.IGNORECASE):
+                    raise NetlistParseError('This is behavioral/RTL Verilog, not a gate-level netlist. Synthesize it first, then upload the synthesized .v file for reverse engineering.')
                 raise NetlistParseError('No gate instances found.')
             upload_id = circuit_store.save_upload(content)
             nodes, edges, feats, labels = build_circuit_graph(parsed)
