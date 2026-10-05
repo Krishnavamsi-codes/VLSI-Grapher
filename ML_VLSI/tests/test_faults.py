@@ -122,6 +122,7 @@ def test_broken_full_adder_repair_uses_the_verified_carry_input():
     floating = next(f for f in out['findings'] if f['check'] == 'floating_net')
     assert floating['suggested_edges'] == [{
         'from_net': 'cin', 'to_gate': 1, 'to_pin': 'B', 'replaces_net': 'missing_cin', 'confidence': 1.0,
+        'to_instance': 'U2', 'paired_instance': 'U4', 'paired_output': 'carry_cin',
         'reason': ('full-adder pattern verified: cin is the carry-in paired with U2.B; '
                    'it replaces undriven net missing_cin.')
     }]

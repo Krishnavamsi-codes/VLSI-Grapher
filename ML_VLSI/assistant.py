@@ -88,6 +88,16 @@ def _strip_comment_lines(text):
 
 def suggested_fix_text(edges):
     """The finding's suggested edges as one sentence; code-written, so the fix never depends on the LLM."""
+    if len(edges) == 1 and 'full-adder pattern verified' in edges[0].get('reason', ''):
+        e = edges[0]
+        target = f"{e.get('to_instance', 'the sum XOR gate')}.{e.get('to_pin', 'input')}"
+        paired = e.get('paired_instance', 'the carry gate')
+        carry_out = e.get('paired_output')
+        do_not = (f" Do not connect {paired}'s output {carry_out} to {target}; that output is a computed carry term, "
+                  'not the carry-in signal.' if carry_out else '')
+        return (f"Recommended repair (not applied automatically): branch the existing {e['from_net']} wire directly "
+                f"to {target}, replacing {e.get('replaces_net', 'the undriven wire')}. It is the same carry-in "
+                f"signal already used by {paired}.{do_not}")
     return ('Repair computed by the connectivity checks (a suggestion; not applied automatically): '
             + '; '.join(_edge_text(e) for e in edges[:4]) + '.')
 

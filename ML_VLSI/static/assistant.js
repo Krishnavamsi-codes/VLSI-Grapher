@@ -319,6 +319,14 @@
     };
     return messages[f.check] || 'The tool found a connection pattern that needs an engineer to inspect it.';
   }
+  function repairText(f) {
+    const e = (f.suggested_edges || [])[0];
+    if (!e) return '';
+    if (String(e.reason || '').includes('full-adder pattern verified')) {
+      return `Use the existing ${e.from_net} wire: branch it to ${e.to_instance}.${e.to_pin} instead of ${e.replaces_net}. Do not connect ${e.paired_instance}'s output ${e.paired_output}; that is a different carry result.`;
+    }
+    return 'A possible repair is available. Open “How do I fix this?” to review it before changing the design.';
+  }
 
   // small inline SVG bar chart: rows = [{label, value, hl}], vertical bars; values shown on hover and above bars
   function barChart(title, rows, opts) {
@@ -586,6 +594,7 @@
       <div class="finding sev-border-${esc(f.severity)}" data-finding="${esc(f.id)}">
         <div class="item-head">${sevBadge(f.severity)} ${certChip(f.certainty)} <b>${esc(f.id)}</b> <span class="muted">${esc(f.check)}</span></div>
         <div class="small"><b>In simple terms:</b> ${esc(laymanFinding(f))}</div>
+        ${repairText(f) ? `<div class="small sugg"><b>Recommended repair:</b> ${esc(repairText(f))}</div>` : ''}
         <div class="small">${esc(f.evidence)}</div>
         ${f.suggested_edges && f.suggested_edges.length ? `<div class="small sugg"><i class="fa-solid fa-link-slash"></i> ${f.suggested_edges.length} suggested connection(s)${f.suggested_edges.some(e => e.ambiguous) ? ' · ambiguous' : ''}</div>` : ''}
         <div class="ask-row">${askButtons(f.category === 'gnn_suspicion'

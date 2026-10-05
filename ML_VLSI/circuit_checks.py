@@ -742,7 +742,9 @@ def _full_adder_sum_repair(ctx, sink):
         candidate = next((net for net in nets if net != shared_net), None)
         entry = ctx.m['nets'].get(candidate or '')
         if entry and any('pi' in driver for driver in entry['drivers']):
-            return candidate
+            out_nets = [net for _, net in ctx.out_nets[other_gate]]
+            return {'carry_in': candidate, 'paired_gate': other_gate,
+                    'paired_output': out_nets[0] if out_nets else None}
     return None
 
 
@@ -753,11 +755,15 @@ def _match_suggestions(ctx):
     for i, sink in enumerate(ctx.sinks):
         if sink['finding']['check'] != 'floating_net':
             continue
-        carry_in = _full_adder_sum_repair(ctx, sink)
-        if not carry_in:
+        full_adder = _full_adder_sum_repair(ctx, sink)
+        if not full_adder:
             continue
+        carry_in = full_adder['carry_in']
         edge = {'from_net': carry_in, 'to_gate': sink['gate_id'], 'to_pin': sink['pin'],
                 'replaces_net': sink['net'], 'confidence': 1.0,
+                'to_instance': ctx.inst[sink['gate_id']],
+                'paired_instance': ctx.inst[full_adder['paired_gate']],
+                'paired_output': full_adder['paired_output'],
                 'reason': (f'full-adder pattern verified: {carry_in} is the carry-in paired with '
                            f'{ctx.inst[sink["gate_id"]]}.{sink["pin"]}; it replaces undriven net {sink["net"]}.')}
         sink['finding']['suggested_edges'].append(edge)
