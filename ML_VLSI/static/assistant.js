@@ -321,9 +321,9 @@
   }
   function repairText(f) {
     const e = (f.suggested_edges || [])[0];
-    if (!e) return '';
-    if (String(e.reason || '').includes('full-adder pattern verified')) {
-      return `Use the existing ${e.from_net} wire: branch it to ${e.to_instance}.${e.to_pin} instead of ${e.replaces_net}. Do not connect ${e.paired_instance}'s output ${e.paired_output}; that is a different carry result.`;
+    if (!e) return f.repair && f.repair.confidence === 'no_fix_found' ? f.repair.reason : '';
+    if (e.repair && ['verified', 'equivalent'].includes(e.repair.confidence)) {
+      return `Verified: connect ${e.from_net} to ${e.to_instance}.${e.to_pin}, replacing ${e.replaces_net}. ${e.repair.reason}`;
     }
     return 'A possible repair is available. Open “How do I fix this?” to review it before changing the design.';
   }
@@ -595,6 +595,7 @@
         <div class="item-head">${sevBadge(f.severity)} ${certChip(f.certainty)} <b>${esc(f.id)}</b> <span class="muted">${esc(f.check)}</span></div>
         <div class="small"><b>In simple terms:</b> ${esc(laymanFinding(f))}</div>
         ${repairText(f) ? `<div class="small sugg"><b>Recommended repair:</b> ${esc(repairText(f))}</div>` : ''}
+        ${(f.repair || (f.suggested_edges && f.suggested_edges[0] && f.suggested_edges[0].repair)) && ((f.repair || f.suggested_edges[0].repair).rejected || []).length ? `<details class="small muted"><summary>Why not the other candidates?</summary>${((f.repair || f.suggested_edges[0].repair).rejected || []).map(r => `<div>${esc(r.net)}: ${esc(r.why)}</div>`).join('')}</details>` : ''}
         <div class="small">${esc(f.evidence)}</div>
         ${f.suggested_edges && f.suggested_edges.length ? `<div class="small sugg"><i class="fa-solid fa-link-slash"></i> ${f.suggested_edges.length} suggested connection(s)${f.suggested_edges.some(e => e.ambiguous) ? ' · ambiguous' : ''}</div>` : ''}
         <div class="ask-row">${askButtons(f.category === 'gnn_suspicion'

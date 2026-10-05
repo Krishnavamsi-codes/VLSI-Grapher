@@ -120,12 +120,13 @@ def test_broken_full_adder_repair_uses_the_verified_carry_input():
     name = 'Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v'
     out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
     floating = next(f for f in out['findings'] if f['check'] == 'floating_net')
-    assert floating['suggested_edges'] == [{
-        'from_net': 'cin', 'to_gate': 1, 'to_pin': 'B', 'replaces_net': 'missing_cin', 'confidence': 1.0,
-        'to_instance': 'U2', 'paired_instance': 'U4', 'paired_output': 'carry_cin',
-        'reason': ('full-adder pattern verified: cin is the carry-in paired with U2.B; '
-                   'it replaces undriven net missing_cin.')
-    }]
+    repair = floating['suggested_edges'][0]['repair']
+    assert repair['pin'] == 'U2.B'
+    assert repair['fix_net'] == 'cin'
+    assert repair['confidence'] == 'verified'
+    rejected = {r['net']: r['why'] for r in repair['rejected']}
+    assert {'a', 'b', 'carry_ab', 'carry_cin'} <= set(rejected)
+    assert rejected['a'] == 'sum becomes b'
 
 
 @pytest.mark.slow

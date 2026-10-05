@@ -45,7 +45,7 @@ DEFAULT_TIMEOUT_S = 60.0
 LOCAL_TIMEOUT_S = 180.0          # OPENAI_BASE_URL set; override either with OPENAI_TIMEOUT
 RETRY_BACKOFF_S = 2.0
 LOCAL_API_KEY = 'local-no-key'   # placeholder: local servers ignore the key, the SDK requires one
-LOCAL_TEMPERATURE = 0.1          # local path only; the OpenAI path sends no temperature
+LOCAL_TEMPERATURE = 0.0          # local path only; verified repairs must be phrased deterministically
 DRAFT_FIELD = 'reply'            # schema field that keeps the tools-step draft verbatim (split calls only)
 
 # USD per 1M tokens, standard tier, short context. Source: developers.openai.com/api/docs/pricing

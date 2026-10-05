@@ -60,6 +60,8 @@ def _compact_finding(f, evidence_chars=400):
            'evidence': f['evidence'][:evidence_chars], 'gate_ids': f['gate_ids'][:12], 'nets': f['nets'][:6]}
     if f['suggested_edges']:
         out['suggested_edges'] = f['suggested_edges'][:4]
+    if f.get('repair'):
+        out['repair'] = f['repair']
     for k in ('bus', 'bit_run', 'count', 'size'):
         if k in f:
             out[k] = f[k]
@@ -88,18 +90,33 @@ def _strip_comment_lines(text):
 
 def suggested_fix_text(edges):
     """The finding's suggested edges as one sentence; code-written, so the fix never depends on the LLM."""
-    if len(edges) == 1 and 'full-adder pattern verified' in edges[0].get('reason', ''):
+    repair = edges[0].get('repair') if len(edges) == 1 else None
+    if repair and repair.get('confidence') in ('verified', 'equivalent'):
         e = edges[0]
         target = f"{e.get('to_instance', 'the sum XOR gate')}.{e.get('to_pin', 'input')}"
-        paired = e.get('paired_instance', 'the carry gate')
-        carry_out = e.get('paired_output')
-        do_not = (f" Do not connect {paired}'s output {carry_out} to {target}; that output is a computed carry term, "
-                  'not the carry-in signal.' if carry_out else '')
-        return (f"Recommended repair (not applied automatically): branch the existing {e['from_net']} wire directly "
-                f"to {target}, replacing {e.get('replaces_net', 'the undriven wire')}. It is the same carry-in "
-                f"signal already used by {paired}.{do_not}")
+        return (f"Verified repair (not applied automatically): connect {e['from_net']} to {target}, replacing "
+                f"{e.get('replaces_net', 'the undriven wire')}. {repair['reason']}")
     return ('Repair computed by the connectivity checks (a suggestion; not applied automatically): '
             + '; '.join(_edge_text(e) for e in edges[:4]) + '.')
+
+
+def verified_fix_template(repair):
+    """Short deterministic fallback when a small local model cannot preserve a verified repair."""
+    return (f"Wrong: {repair['problem'].replace('_', ' ')} at {repair['pin']}. "
+            f"Connect {repair['fix_net']} to {repair['pin']}. Why: {repair['reason']}")
+
+
+def validate_fix_reply(text, repair, model):
+    """A repair answer may phrase facts, but it may not change the computed endpoint."""
+    if not repair or repair.get('confidence') not in ('verified', 'equivalent'):
+        return text
+    instances = {g['inst_name'].lstrip('\\\\').strip() for g in model['gates']}
+    named = re.findall(r'\b(?:net|connect)\s+([A-Za-z_][\w$]*(?:\[\d+\])?)', text or '', re.I)
+    valid_nets = set(model['nets'])
+    right_pin = repair['pin'] in (text or '')
+    if repair['fix_net'] not in named or not right_pin or any(n not in valid_nets for n in named):
+        return verified_fix_template(repair)
+    return text
 
 
 def _ref_gates(model, texts, nets=(), buses=()):
@@ -874,6 +891,7 @@ _NAME_RE = re.compile(r'\\\S+|[A-Za-z_][\w$/.]*(?:\[\d+\])?')
 _PATH_RE = re.compile(r'\b(path|trace|route|between|reach(?:es)?|flows?)\b', re.I)
 _ISSUE_RE = re.compile(r'\b(issues?|problems?|errors?|warnings?|wrong|faults?|faulty|missing|suspicious|flagged|'
                        r'findings?|broken|unconnected|floating|dangling|health|healthy)\b', re.I)
+_FIX_RE = re.compile(r'\b(fix|repair|connect|wire|reconnect)\b', re.I)
 _PRED_RE = re.compile(r'\b(graphsaint|predict\w*|gnn|classif\w*)\b', re.I)
 _FOLLOW_UP_RE = re.compile(r'\b(this|that|these|those|it|its|they|them|their|same|above|previous)\b', re.I)
 _NAME_HINT_RE = re.compile(r'\b(net|nets|bus|buses|signal|wire|bit)\s*$', re.I)
@@ -1361,6 +1379,15 @@ class Assistant:
         reply = g.check_metrics(reply, 'chat.reply', self._metric_facts(insights, {x for x in gates_seen
                                                                                    if g.gate_ok(x)}),
                                 analysis.get('predictions'), cc.CLASS_NAMES)
+        # The model only rewrites this already-proved object.  A wrong/missing endpoint
+        # (including an invented net) is replaced by the deterministic three-sentence form.
+        focused_id = fresh_focus[1] if fresh_focus and fresh_focus[0] == 'finding' else None
+        verified = next((e.get('repair') for f in analysis['findings']
+                         if (focused_id is None or f['id'] == focused_id)
+                         for e in f.get('suggested_edges', [])
+                         if e.get('repair', {}).get('confidence') in ('verified', 'equivalent')), None)
+        if verified and _FIX_RE.search(message):
+            reply = validate_fix_reply(reply, verified, model)
         if not (reply or '').strip():
             reply = ('I could not phrase a verified answer. The circuit data says:\n' + '\n'.join(summaries)
                      if summaries else 'I could not give a verified answer to that. Please ask about a specific '
