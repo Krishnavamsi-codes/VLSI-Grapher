@@ -100,7 +100,7 @@ def test_circuit_listing_has_demo_group_and_no_uploads(server):
     status, _, parsed, _ = _request(server, 'GET', '/api/circuits')
     assert status == 200
     assert len(parsed['circuits']) == 37
-    assert len(parsed['demo_circuits']) == 8
+    assert len(parsed['demo_circuits']) == 12
     assert not any('Upload' in c for c in parsed['circuits'] + parsed['demo_circuits'])
 
 
@@ -115,7 +115,9 @@ def test_benchmark_infer(server):
 
 
 def test_demo_infer_uses_base_predictions(server):
-    demo = circuit_store.list_demos()[0]
+    # Presentation-only demos have no matching GraphSAINT row; this legacy injected
+    # benchmark demo intentionally does and verifies the base-prediction path.
+    demo = 'Demo_cut_carry__Validate_add_mul_8_bit_Syn_65nm.v'
     status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'circuit_name': demo})
     assert status == 200 and parsed['gnn_re_available'] is True
     assert 'unfaulted base circuit' in parsed['gnn_re_message']

@@ -17,6 +17,7 @@ O((N+E) * B/64) with B = number of primary-input bits (Python-int bitsets).
 """
 
 import difflib
+import re
 import threading
 import time
 from collections import OrderedDict, defaultdict, deque
@@ -64,6 +65,7 @@ LOW_PROB_THRESHOLD = 0.6
 NEIGHBOUR_MAJORITY = 0.75
 MIN_BUS_WIDTH = 4             # bit-slice analysis only on buses at least this wide
 ADDER_CELL_PREFIXES = ('ADDF', 'ADDH')
+SEQUENTIAL_CELL_RE = re.compile(r'^(S?DFF|LAT|ICG|PREICG|POSTICG|FRICG|RF\dR)', re.I)
 
 
 # ---------------------------------------------------------------------------
@@ -377,14 +379,19 @@ def _check_components(ctx):
     return out
 
 
-def _topo_order(ctx):
-    indeg = [len(p) for p in ctx.pred]
+def _topo_order(ctx, cut_sequential=False):
+    preds = [set(p for p in ctx.pred[g]
+                 if not (cut_sequential and SEQUENTIAL_CELL_RE.match(ctx.cell[p])))
+             for g in range(ctx.n)]
+    indeg = [len(p) for p in preds]
     q = deque(g for g in range(ctx.n) if indeg[g] == 0)
     order = []
     while q:
         g = q.popleft()
         order.append(g)
         for h in ctx.succ[g]:
+            if cut_sequential and SEQUENTIAL_CELL_RE.match(ctx.cell[g]):
+                continue
             indeg[h] -= 1
             if indeg[h] == 0:
                 q.append(h)
@@ -588,7 +595,8 @@ def _fmt_range(sigs):
 
 def _check_structural(ctx):
     out = _check_components(ctx)
-    order, cyclic = _topo_order(ctx)
+    # Register outputs are state from the previous clock edge, not combinational dependencies.
+    order, cyclic = _topo_order(ctx, cut_sequential=True)
     if cyclic:
         out.append(_finding('combinational_loop', 'structural', 'warning',
                             f'{len(cyclic)} gate(s) lie on or behind a combinational cycle '
