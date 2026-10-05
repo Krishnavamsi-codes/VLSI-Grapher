@@ -115,6 +115,18 @@ def test_demo_faults_are_detected():
             assert any(_edge_matches(e, meta['expected_edge']) for e in edges), name
 
 
+def test_broken_full_adder_repair_uses_the_verified_carry_input():
+    """The presentation demo must never guess a/b just because a primary input looks available."""
+    name = 'Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v'
+    out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
+    floating = next(f for f in out['findings'] if f['check'] == 'floating_net')
+    assert floating['suggested_edges'] == [{
+        'from_net': 'cin', 'to_gate': 1, 'to_pin': 'B', 'replaces_net': 'missing_cin', 'confidence': 1.0,
+        'reason': ('full-adder pattern verified: cin is the carry-in paired with U2.B; '
+                   'it replaces undriven net missing_cin.')
+    }]
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize('path', BENCHMARKS, ids=bench_id)
 @pytest.mark.parametrize('fault', FAULT_TYPES)

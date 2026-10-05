@@ -710,13 +710,61 @@ def _describe_edge(ctx, src, sink, conf):
     return e
 
 
+def _full_adder_sum_repair(ctx, sink):
+    """Return the carry-in PI for a broken XOR sum stage, but only for a proven full-adder shape.
+
+    A floating input normally does *not* reveal its intended source.  The exception below is deliberately
+    narrow: XOR(x, ?) makes the sum while AND(x, cin) makes one carry term.  This is the canonical full-adder
+    shape, so the other AND input is the missing XOR input.  Never turn a merely unused primary input into a
+    guessed repair.
+    """
+    if sink['kind'] != 'pin' or not ctx.cell[sink['gate_id']].startswith('XOR2'):
+        return None
+    gate_id, missing_net = sink['gate_id'], sink.get('net')
+    inputs = [net for _, net in ctx.in_nets[gate_id] if net != missing_net]
+    if len(inputs) != 1:
+        return None
+    shared_net = inputs[0]
+    for other_gate, cell in enumerate(ctx.cell):
+        if not cell.startswith('AND2'):
+            continue
+        nets = [net for _, net in ctx.in_nets[other_gate]]
+        if shared_net not in nets:
+            continue
+        candidate = next((net for net in nets if net != shared_net), None)
+        entry = ctx.m['nets'].get(candidate or '')
+        if entry and any('pi' in driver for driver in entry['drivers']):
+            return candidate
+    return None
+
+
 def _match_suggestions(ctx):
-    if not ctx.sinks or not ctx.sources:
+    if not ctx.sinks:
         return
+    repaired = set()
+    for i, sink in enumerate(ctx.sinks):
+        if sink['finding']['check'] != 'floating_net':
+            continue
+        carry_in = _full_adder_sum_repair(ctx, sink)
+        if not carry_in:
+            continue
+        edge = {'from_net': carry_in, 'to_gate': sink['gate_id'], 'to_pin': sink['pin'],
+                'replaces_net': sink['net'], 'confidence': 1.0,
+                'reason': (f'full-adder pattern verified: {carry_in} is the carry-in paired with '
+                           f'{ctx.inst[sink["gate_id"]]}.{sink["pin"]}; it replaces undriven net {sink["net"]}.')}
+        sink['finding']['suggested_edges'].append(edge)
+        repaired.add(i)
     scored = []
     for i, sink in enumerate(ctx.sinks):
+        if i in repaired:
+            scored.append([])
+            continue
         cands = []
         for j, src in enumerate(ctx.sources):
+            # An unused primary input is not evidence that it is the intended source of a floating wire.
+            # Leave generic floating nets for the engineer to trace instead of presenting a plausible-looking lie.
+            if sink['finding']['check'] == 'floating_net' and src['kind'] == 'pi':
+                continue
             s = _score(ctx, src, sink)
             if s is not None:
                 cands.append((s, j))
