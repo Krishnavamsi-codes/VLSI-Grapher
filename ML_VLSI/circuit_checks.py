@@ -17,6 +17,7 @@ O((N+E) * B/64) with B = number of primary-input bits (Python-int bitsets).
 """
 
 import difflib
+import re
 import threading
 import time
 from collections import OrderedDict, defaultdict, deque
@@ -64,6 +65,7 @@ LOW_PROB_THRESHOLD = 0.6
 NEIGHBOUR_MAJORITY = 0.75
 MIN_BUS_WIDTH = 4             # bit-slice analysis only on buses at least this wide
 ADDER_CELL_PREFIXES = ('ADDF', 'ADDH')
+SEQUENTIAL_CELL_RE = re.compile(r'^(S?DFF|LAT|ICG|PREICG|POSTICG|FRICG|RF\dR)', re.I)
 
 
 # ---------------------------------------------------------------------------
@@ -377,14 +379,19 @@ def _check_components(ctx):
     return out
 
 
-def _topo_order(ctx):
-    indeg = [len(p) for p in ctx.pred]
+def _topo_order(ctx, cut_sequential=False):
+    preds = [set(p for p in ctx.pred[g]
+                 if not (cut_sequential and SEQUENTIAL_CELL_RE.match(ctx.cell[p])))
+             for g in range(ctx.n)]
+    indeg = [len(p) for p in preds]
     q = deque(g for g in range(ctx.n) if indeg[g] == 0)
     order = []
     while q:
         g = q.popleft()
         order.append(g)
         for h in ctx.succ[g]:
+            if cut_sequential and SEQUENTIAL_CELL_RE.match(ctx.cell[g]):
+                continue
             indeg[h] -= 1
             if indeg[h] == 0:
                 q.append(h)
@@ -588,7 +595,8 @@ def _fmt_range(sigs):
 
 def _check_structural(ctx):
     out = _check_components(ctx)
-    order, cyclic = _topo_order(ctx)
+    # Register outputs are state from the previous clock edge, not combinational dependencies.
+    order, cyclic = _topo_order(ctx, cut_sequential=True)
     if cyclic:
         out.append(_finding('combinational_loop', 'structural', 'warning',
                             f'{len(cyclic)} gate(s) lie on or behind a combinational cycle '
@@ -710,13 +718,203 @@ def _describe_edge(ctx, src, sink, conf):
     return e
 
 
-def _match_suggestions(ctx):
-    if not ctx.sinks or not ctx.sources:
+def _logic_kind(cell):
+    """Library names such as XOR2_X1M_A9TH are evaluated by their logic prefix."""
+    m = re.match(r'(XNOR|XOR|NAND|NOR|AND|OR|NOT|INV|BUF)', cell.upper())
+    return m.group(1) if m else None
+
+
+def _primary_inputs(model):
+    """Ignore parser header artefacts such as ``(a``; real nets are identifiers."""
+    return [n for n in model['primary_inputs'] if re.match(r'^(?:\\\\\S+|[A-Za-z_][\w$]*(?:\[\d+\])?)$', n)]
+
+
+def _simulate(model, patch=None):
+    """Return a truth table for the small combinational gate subset used for repair proof.
+
+    ``patch`` is ``(gate_id, pin, net)``.  Unsupported cells or cycles yield None
+    for the affected signal, which can never prove a repair.
+    """
+    patch = patch or ()
+    rows = []
+    pis = _primary_inputs(model)
+    for bits in range(1 << len(pis)):
+        values = {n: (bits >> i) & 1 for i, n in enumerate(pis)}
+        visiting = set()
+        def net_value(net):
+            if net in values:
+                return values[net]
+            entry = model['nets'].get(net)
+            if not entry or len(entry['drivers']) != 1:
+                return None
+            drv = entry['drivers'][0]
+            if 'const' in drv:
+                return 1 if "1" in drv['const'].lower() else 0
+            if 'gate_id' not in drv:
+                return None
+            gid = drv['gate_id']
+            if gid in visiting:
+                return None
+            visiting.add(gid)
+            kind = _logic_kind(model['gates'][gid]['cell_type'])
+            ins = []
+            for pin, source in model['gate_pins'][gid].items():
+                if model['gate_dirs'][gid][pin] == 'output':
+                    continue
+                if patch and gid == patch[0] and pin == patch[1]:
+                    source = patch[2]
+                ins.append(net_value(source))
+            visiting.remove(gid)
+            if kind is None or not ins or any(v is None for v in ins):
+                result = None
+            elif kind == 'AND': result = int(all(ins))
+            elif kind == 'NAND': result = int(not all(ins))
+            elif kind == 'OR': result = int(any(ins))
+            elif kind == 'NOR': result = int(not any(ins))
+            elif kind == 'XOR': result = sum(ins) & 1
+            elif kind == 'XNOR': result = int(not (sum(ins) & 1))
+            elif kind in ('NOT', 'INV'): result = int(not ins[0])
+            elif kind == 'BUF': result = ins[0]
+            else: result = None
+            for pin, out_net in model['gate_pins'][gid].items():
+                if model['gate_dirs'][gid][pin] == 'output':
+                    values[out_net] = result
+            return values.get(net)
+        rows.append({po: net_value(po) for po in model['primary_outputs']})
+    return rows
+
+
+def _full_adder_spec(model):
+    """Recognise the educational 1-bit full-adder interface without guessing a wire."""
+    inputs = _primary_inputs(model)
+    if len(inputs) != 3 or len(model['primary_outputs']) != 2:
+        return None
+    names = {n.lower(): n for n in inputs}
+    pos = {n.lower(): n for n in model['primary_outputs']}
+    if not {'a', 'b', 'cin'} <= set(names) or not {'sum', 'cout'} <= set(pos):
+        return None
+    expected = []
+    for bits in range(8):
+        a, b, cin = ((bits >> i) & 1 for i in range(3))
+        expected.append({pos['sum']: a ^ b ^ cin, pos['cout']: int(a + b + cin >= 2)})
+    return expected
+
+
+def _gate_signature(model, gid, omitted_pin):
+    """Cell plus local driver/fanout structure, deliberately ignoring the broken input."""
+    inputs, outputs = [], []
+    for port, net in model['gate_pins'][gid].items():
+        entry = model['nets'][net]
+        if model['gate_dirs'][gid][port] == 'output':
+            outputs.append((port, tuple(sorted('PO' if 'po' in r else model['gates'][r['gate_id']]['cell_type']
+                                                for r in entry['readers']))))
+        elif port != omitted_pin:
+            inputs.append((port, tuple(sorted('PI' if 'pi' in d else model['gates'][d['gate_id']]['cell_type']
+                                               for d in entry['drivers']))))
+    return (model['gates'][gid]['cell_type'], tuple(sorted(inputs)), tuple(sorted(outputs)))
+
+
+def _reference_pin_net(wrong, reference, gate_id, pin):
+    """Align by cell type plus driver/fanout connectivity; names only break ties."""
+    inst = wrong['gates'][gate_id]['inst_name']
+    sig = _gate_signature(wrong, gate_id, pin)
+    matches = [i for i in range(reference['num_gates'])
+               if pin in reference['gate_pins'][i] and _gate_signature(reference, i, pin) == sig]
+    named = [i for i in matches if reference['gates'][i]['inst_name'] == inst]
+    if len(named) == 1:
+        matches = named
+    return reference['gate_pins'][matches[0]].get(pin) if len(matches) == 1 else None
+
+
+def compute_fix(wrong_netlist, reference_netlist=None, gate_id=None, pin=None, floating_net=None):
+    """Compute one repair object.  This is the sole source of repair truth for UI and chat."""
+    if gate_id is None or pin is None:
+        for gid, pins in enumerate(wrong_netlist['gate_pins']):
+            for p, net in pins.items():
+                if wrong_netlist['gate_dirs'][gid][p] != 'output' and not wrong_netlist['nets'][net]['drivers']:
+                    gate_id, pin, floating_net = gid, p, net
+                    break
+            if gate_id is not None: break
+    if gate_id is None or pin is None:
+        return None
+    floating_net = floating_net or wrong_netlist['gate_pins'][gate_id].get(pin)
+    base = {'pin': f"{wrong_netlist['gates'][gate_id]['inst_name']}.{pin}", 'problem': 'floating_input',
+            'fix_net': None, 'confidence': 'no_fix_found', 'reason': 'No single-wire fix found.', 'rejected': []}
+    expected = _simulate(reference_netlist) if reference_netlist is not None else _full_adder_spec(wrong_netlist)
+    ref_net = _reference_pin_net(wrong_netlist, reference_netlist, gate_id, pin) if reference_netlist is not None else None
+    if expected is None:
+        base['reason'] = 'No reference truth table or recognised circuit specification is available.'
+        return base
+    # Candidate sources: PIs and driven nets, excluding this gate's transitive fanout.
+    ctx = _Ctx(wrong_netlist)
+    downstream, todo = set(), list(ctx.succ[gate_id])
+    while todo:
+        g = todo.pop()
+        if g not in downstream:
+            downstream.add(g); todo.extend(ctx.succ[g])
+    candidates = list(_primary_inputs(wrong_netlist))
+    for net, entry in wrong_netlist['nets'].items():
+        if (re.match(r'^(?:\\\\\S+|[A-Za-z_][\w$]*(?:\[\d+\])?)$', net) and entry['drivers']
+                and not any(d.get('gate_id') in downstream or d.get('gate_id') == gate_id for d in entry['drivers'])):
+            candidates.append(net)
+    candidates = list(dict.fromkeys(n for n in candidates if n != floating_net))
+    accepted = []
+    for net in candidates:
+        actual = _simulate(wrong_netlist, (gate_id, pin, net))
+        if actual == expected:
+            accepted.append(net)
+        else:
+            why = 'does not match the required truth table'
+            # Explain the important cancellation case, rather than merely reporting a mismatch count.
+            if net in _primary_inputs(wrong_netlist):
+                for po in wrong_netlist['primary_outputs']:
+                    col = [r[po] for r in actual]
+                    for other in _primary_inputs(wrong_netlist):
+                        target = [(i >> _primary_inputs(wrong_netlist).index(other)) & 1 for i in range(len(col))]
+                        if col == target:
+                            why = f'{po} becomes {other}'
+            base['rejected'].append({'net': net, 'why': why})
+    if ref_net in accepted:
+        accepted = [ref_net]  # the aligned reference resolves functionally equivalent candidates
+    if len(accepted) == 1:
+        base.update(fix_net=accepted[0], confidence='verified',
+                    reason=('Matches the reference connection and truth table.' if ref_net else
+                            'Matches every input combination of the recognised full-adder truth table.'))
+    elif len(accepted) > 1:
+        base.update(fix_net=accepted[0], confidence='equivalent',
+                    reason='Multiple functionally equivalent single-wire repairs were verified.', equivalents=accepted)
+    return base
+
+
+def _match_suggestions(ctx, reference_model=None):
+    if not ctx.sinks:
         return
+    repaired = set()
+    for i, sink in enumerate(ctx.sinks):
+        if sink['finding']['check'] != 'floating_net':
+            continue
+        fix = compute_fix(ctx.m, reference_model, sink['gate_id'], sink['pin'], sink.get('net'))
+        sink['finding']['repair'] = fix
+        if not fix or fix['confidence'] not in ('verified', 'equivalent'):
+            continue
+        carry_in = fix['fix_net']
+        edge = {'from_net': carry_in, 'to_gate': sink['gate_id'], 'to_pin': sink['pin'],
+                'replaces_net': sink['net'], 'confidence': 1.0, 'repair': fix,
+                'to_instance': ctx.inst[sink['gate_id']],
+                'reason': fix['reason']}
+        sink['finding']['suggested_edges'].append(edge)
+        repaired.add(i)
     scored = []
     for i, sink in enumerate(ctx.sinks):
+        if i in repaired:
+            scored.append([])
+            continue
         cands = []
         for j, src in enumerate(ctx.sources):
+            # An unused primary input is not evidence that it is the intended source of a floating wire.
+            # Leave generic floating nets for the engineer to trace instead of presenting a plausible-looking lie.
+            if sink['finding']['check'] == 'floating_net' and src['kind'] == 'pi':
+                continue
             s = _score(ctx, src, sink)
             if s is not None:
                 cands.append((s, j))
@@ -793,7 +991,7 @@ def _group(ctx, findings):
     return out
 
 
-def run_checks(model, predictions=None, probabilities=None, prediction_source=None):
+def run_checks(model, predictions=None, probabilities=None, prediction_source=None, reference_model=None):
     """Run all deterministic checks. Returns {'findings': [...], 'stats': {...}}."""
     t0 = time.time()
     ctx = _Ctx(model)
@@ -801,7 +999,7 @@ def run_checks(model, predictions=None, probabilities=None, prediction_source=No
     findings += _check_electrical(ctx)
     findings += _check_reachability(ctx)
     findings += _check_structural(ctx)
-    _match_suggestions(ctx)
+    _match_suggestions(ctx, reference_model)
     _attach_repairs_to_structural(ctx, findings)
     findings += _check_gnn(ctx, predictions, probabilities, prediction_source)
     findings = _group(ctx, findings)

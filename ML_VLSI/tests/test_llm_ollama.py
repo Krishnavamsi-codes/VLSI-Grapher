@@ -213,8 +213,8 @@ def test_local_requests_send_low_temperature():
         {'reply': 'x', 'highlights': HIGHLIGHTS})), sdk_response(text='{"sum": 5}')])
     _chat_create(client)                     # split: step A + step B
     _create(client, tools=None)              # single schema-only call
-    assert [c.get('temperature') for c in client._sdk.calls] == [0.1, 0.1, 0.1]
-    assert llm_client.LOCAL_TEMPERATURE == 0.1
+    assert [c.get('temperature') for c in client._sdk.calls] == [0.0, 0.0, 0.0]
+    assert llm_client.LOCAL_TEMPERATURE == 0.0
 
 
 def test_openai_requests_send_no_temperature_and_keep_shape():

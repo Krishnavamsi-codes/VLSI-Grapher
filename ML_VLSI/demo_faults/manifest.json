@@ -1,4 +1,40 @@
 {
+ "Demo_06_2Bit_Counter__Correct.v": {
+  "base": null,
+  "fault": "presentation_counter_correct",
+  "description": "Correct 2-bit synchronous up counter. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
+ "Demo_07_2Bit_Counter__Wrong_Floating_Toggle_Input.v": {
+  "base": null,
+  "fault": "presentation_counter_wrong",
+  "description": "Broken 2-bit counter: U2 reads missing_toggle rather than count[0]. Expected result: floating_net error.",
+  "expected_check": "floating_net"
+ },
+ "Demo_08_Half_Subtractor__Correct.v": {
+  "base": null,
+  "fault": "presentation_subtractor_correct",
+  "description": "Correct 1-bit half subtractor. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
+ "Demo_09_Half_Subtractor__Wrong_Floating_Difference_Input.v": {
+  "base": null,
+  "fault": "presentation_subtractor_wrong",
+  "description": "Broken half subtractor: U1 reads missing_b rather than b. Expected result: floating_net error.",
+  "expected_check": "floating_net"
+ },
+ "Demo_04_Full_Adder__Correct.v": {
+  "base": null,
+  "fault": "presentation_full_adder_correct",
+  "description": "Correct 1-bit full adder. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
+ "Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v": {
+  "base": null,
+  "fault": "presentation_full_adder_wrong",
+  "description": "Broken 1-bit full adder: the sum XOR reads missing_cin instead of cin. Expected result: floating_net error.",
+  "expected_check": "floating_net"
+ },
  "Demo_01_Floating_Input__small.v": {
   "base": null,
   "fault": "presentation_floating_input",

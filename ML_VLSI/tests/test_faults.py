@@ -103,13 +103,30 @@ def test_findings_have_contract_fields():
 def test_demo_faults_are_detected():
     with open(DEMO_MANIFEST, encoding='utf-8') as fh:
         manifest = json.load(fh)
-    assert len(manifest) == 6
+    assert len(manifest) == 12
     for name, meta in manifest.items():
         out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
-        assert any(f['check'] == meta['expected_check'] for f in out['findings']), name
+        if meta['expected_check']:
+            assert any(f['check'] == meta['expected_check'] for f in out['findings']), name
+        else:
+            assert not [f for f in out['findings'] if f['severity'] == 'error'], name
         if 'expected_edge' in meta:
             edges = [e for f in out['findings'] for e in f['suggested_edges']]
             assert any(_edge_matches(e, meta['expected_edge']) for e in edges), name
+
+
+def test_broken_full_adder_repair_uses_the_verified_carry_input():
+    """The presentation demo must never guess a/b just because a primary input looks available."""
+    name = 'Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v'
+    out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
+    floating = next(f for f in out['findings'] if f['check'] == 'floating_net')
+    repair = floating['suggested_edges'][0]['repair']
+    assert repair['pin'] == 'U2.B'
+    assert repair['fix_net'] == 'cin'
+    assert repair['confidence'] == 'verified'
+    rejected = {r['net']: r['why'] for r in repair['rejected']}
+    assert {'a', 'b', 'carry_ab', 'carry_cin'} <= set(rejected)
+    assert rejected['a'] == 'sum becomes b'
 
 
 @pytest.mark.slow
