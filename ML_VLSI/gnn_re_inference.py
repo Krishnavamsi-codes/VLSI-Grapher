@@ -121,6 +121,9 @@ def lookup_circuit(circuit_name):
     f1_mac = float(f1_score(y_true, y_pred, average="macro",     zero_division=0))
     prec   = float(precision_score(y_true, y_pred, average="macro", zero_division=0))
     rec    = float(recall_score(y_true, y_pred, average="macro", zero_division=0))
+    prec_w = float(precision_score(y_true, y_pred, average="weighted", zero_division=0))
+    rec_w  = float(recall_score(y_true, y_pred, average="weighted", zero_division=0))
+    f1_w   = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
 
     conf = confusion_matrix(y_true, y_pred, labels=list(range(NUM_CLASSES)))
 
@@ -139,6 +142,9 @@ def lookup_circuit(circuit_name):
             "f1_macro":         f1_mac,
             "precision":        prec,
             "recall":           rec,
+            "precision_weighted": prec_w,
+            "recall_weighted":  rec_w,
+            "f1_weighted":      f1_w,
             "predictions":      y_pred.tolist(),
             "probabilities":    probs,
             "confusion_matrix": conf.tolist(),

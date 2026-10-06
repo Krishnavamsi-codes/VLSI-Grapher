@@ -90,5 +90,17 @@
    "to_gate": 45,
    "to_pin": "A"
   }
+ },
+ "Demo_10_Half_Subtractor__Wrong_Missing_Pin.v": {
+  "base": null,
+  "fault": "presentation_subtractor_missing_pin",
+  "description": "Broken half subtractor: pin B of U1 is left blank (.B()). Expected result: missing_pin error.",
+  "expected_check": "missing_pin"
+ },
+ "Demo_11_2Bit_Counter__Wrong_Two_Drivers.v": {
+  "base": null,
+  "fault": "presentation_counter_two_drivers",
+  "description": "Broken 2-bit counter: U2 (XOR) and an extra U5 (BUF) both drive next_count1. Expected result: multi_driver error.",
+  "expected_check": "multi_driver"
  }
 }

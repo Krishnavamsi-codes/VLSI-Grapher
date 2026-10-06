@@ -100,7 +100,7 @@ def test_circuit_listing_has_demo_group_and_no_uploads(server):
     status, _, parsed, _ = _request(server, 'GET', '/api/circuits')
     assert status == 200
     assert len(parsed['circuits']) == 37
-    assert len(parsed['demo_circuits']) == 12
+    assert len(parsed['demo_circuits']) == 14
     assert not any('Upload' in c for c in parsed['circuits'] + parsed['demo_circuits'])
 
 
@@ -132,14 +132,32 @@ def test_upload_flow_and_na_metrics(server):
     try:
         status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'upload_id': up['upload_id']})
         assert status == 200
-        assert parsed['metrics'] is None and parsed['gnn_re_available'] is False
-        assert parsed['gnn_re_message'].startswith('N/A: no GraphSAINT prediction for uploads')
-        assert parsed['prediction_source'] == 'baseline' and len(parsed['predictions']) == 79
+        # an exact copy of a dataset circuit is matched and scored like the benchmark itself
+        assert parsed['gnn_re_available'] is True and parsed['prediction_source'] == 'graphsaint'
+        _, _, bench, _ = _request(server, 'POST', '/api/infer', {'circuit_name': 'Train_add_mul_4_bit_Syn_65nm.v'})
+        assert parsed['metrics']['accuracy'] == bench['metrics']['accuracy']
+        assert parsed['baseline']['accuracy'] == bench['baseline']['accuracy']
         status, _, loaded, _ = _request(server, 'GET', '/api/load_circuit?upload_id=' + up['upload_id'])
         assert status == 200 and loaded['source'] == 'upload'
         # uploads never appear in the benchmark dropdown
         _, _, listing, _ = _request(server, 'GET', '/api/circuits')
         assert up['upload_id'] + '.v' not in listing['circuits']
+    finally:
+        circuit_store.delete_upload(up['upload_id'])
+
+
+def test_unmatched_upload_has_no_scores(server):
+    with open(circuit_store.os.path.join(circuit_store.DATASET_DIR, 'Train_add_mul_4_bit_Syn_65nm.v')) as f:
+        content = f.read() + '\n// edited copy\n'
+    _, _, up, _ = _request(server, 'POST', '/api/upload_circuit', {'filename': 'y.v', 'content': content})
+    try:
+        status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'upload_id': up['upload_id']})
+        assert status == 200
+        assert parsed['metrics'] is None and parsed['gnn_re_available'] is False
+        assert parsed['gnn_re_message'].startswith('N/A: this upload is not a dataset circuit')
+        # name-guessed labels are not ground truth, so the baseline is not scored either
+        assert 'accuracy' not in parsed['baseline']
+        assert parsed['prediction_source'] == 'baseline' and len(parsed['predictions']) == 79
     finally:
         circuit_store.delete_upload(up['upload_id'])
 

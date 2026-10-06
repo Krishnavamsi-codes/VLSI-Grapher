@@ -130,6 +130,9 @@ class CircuitGNN:
         _, _, f1_micro, _ = precision_recall_fscore_support(
             labels, preds, average='micro', zero_division=0
         )
+        precision_w, recall_w, f1_w, _ = precision_recall_fscore_support(
+            labels, preds, average='weighted', zero_division=0
+        )
         conf_mat = confusion_matrix(labels, preds, labels=list(range(self.num_classes)))
         
         return {
@@ -138,6 +141,9 @@ class CircuitGNN:
             'f1_macro': float(f1_macro),
             'precision': float(precision),
             'recall': float(recall),
+            'precision_weighted': float(precision_w),
+            'recall_weighted': float(recall_w),
+            'f1_weighted': float(f1_w),
             'confusion_matrix': conf_mat.tolist(),
             'predictions': preds.tolist(),
             'probabilities': probs.tolist()

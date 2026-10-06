@@ -158,13 +158,13 @@ def parse_verilog_text(content):
     
     # Header & body searches
     full_search_text = header_ports + '\n;\n' + content
-    for inp in re.finditer(r'input\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
+    for inp in re.finditer(r'\binput\b\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
         for name in inp.group(1).split(','):
             n = name.strip()
             if n and n not in inputs and n not in ['reg', 'wire', 'logic']:
                 inputs.append(n)
                 
-    for out in re.finditer(r'output\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
+    for out in re.finditer(r'\boutput\b\s*(?:\[\d+:\d+\])?\s*([^;,\n\)]+)', full_search_text):
         for name in out.group(1).split(','):
             n = name.strip()
             if n and n not in outputs and n not in ['reg', 'wire', 'logic']:

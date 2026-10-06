@@ -94,3 +94,9 @@ def test_expression_assign_is_flagged_not_dropped():
     assert any('expression not modeled' in w for w in m['parse_warnings'])
     assert m['nets']['y']['drivers'] == [{'assign': 'a & b'}]
     assert {'assign': 'y'} in m['nets']['a']['readers']
+
+
+def test_module_name_ending_in_input_does_not_add_a_port():
+    parsed = parse_verilog_text("module sum_input (a, y);\n  input a;\n  output y;\n"
+                                "  INV_X1M_A9TH U1 (.A(a), .Y(y));\nendmodule\n")
+    assert parsed['inputs'] == ['a']

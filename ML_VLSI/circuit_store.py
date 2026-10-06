@@ -113,13 +113,42 @@ def list_demos():
                   if os.path.basename(f) in manifest)
 
 
+_dataset_fingerprints = None
+
+
+def _fingerprint(data):
+    """Content hash that ignores line-ending and trailing-whitespace differences."""
+    if isinstance(data, bytes):
+        data = data.decode('utf-8', errors='replace')
+    lines = data.splitlines()
+    norm = chr(10).join(line.rstrip() for line in lines).strip()
+    return hashlib.sha256(norm.encode('utf-8')).hexdigest()
+
+
+def match_benchmark(content):
+    """Return the benchmark filename whose netlist is identical to `content`, or None."""
+    global _dataset_fingerprints
+    if _dataset_fingerprints is None:
+        prints = {}
+        for name in list_benchmarks():
+            with open(os.path.join(DATASET_DIR, name), 'rb') as f:
+                prints.setdefault(_fingerprint(f.read()), name)
+        _dataset_fingerprints = prints
+    return _dataset_fingerprints.get(_fingerprint(content))
+
+
 def resolve_circuit(circuit_name=None, upload_id=None):
     """Return a CircuitRef for a benchmark/demo filename or an upload id."""
     if upload_id is not None:
         if not isinstance(upload_id, str) or not _UPLOAD_ID_RE.match(upload_id):
             raise CircuitRefError(400, 'INVALID_UPLOAD_ID', 'Invalid upload id.')
         path = _inside(UPLOAD_DIR, upload_id + '.v')
-        return CircuitRef('upload', 'upload:' + upload_id, path, 'Uploaded netlist', None)
+        # An upload identical to a benchmark netlist gets that benchmark's labels and predictions.
+        matched = None
+        if os.path.isfile(path):
+            with open(path, 'rb') as f:
+                matched = match_benchmark(f.read())
+        return CircuitRef('upload', 'upload:' + upload_id, path, 'Uploaded netlist', matched)
 
     if not circuit_name:
         raise CircuitRefError(400, 'MISSING_CIRCUIT', 'Provide circuit_name or upload_id.')

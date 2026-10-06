@@ -1,0 +1,59 @@
+{
+ "case1_correct": {
+  "circuit": "Demo_04_Full_Adder__Correct.v",
+  "findings": [],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\n\nNo findings match (no connection problems detected).\n\nModel-based suspicions (0)"
+ },
+ "case1_wrong": {
+  "circuit": "Demo_05_Full_Adder__Wrong_Floating_Sum_Input.v",
+  "findings": [
+   {
+    "id": "F001",
+    "check": "floating_net",
+    "severity": "error",
+    "evidence": "Net missing_cin is read by 1 gate pin(s) (U2.B) but nothing drives it."
+   },
+   {
+    "id": "F002",
+    "check": "unused_pi",
+    "severity": "warning",
+    "evidence": "Primary input (a is never read by any gate or output."
+   }
+  ],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\nELECTRICAL (2)\nERROR\nfact\nF001\nfloating_net\nIn simple terms: The wire \"missing_cin\" is being used, but it is not connected to anything that supplies a 0 or 1. Think of it as an unplugged wire: this part of the circuit cannot produce a reliable answer. Connect it to the intended source.\nRecommended repair: Verified: connect cin to U2.B, replacing missing_cin. Matches every input combination of the recognised full-adder truth table.\nWhy not the other candidates?\nNet missing_cin is read by 1 gate pin(s) (U2"
+ },
+ "case2_correct": {
+  "circuit": "Demo_08_Half_Subtractor__Correct.v",
+  "findings": [],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\n\nNo findings match (no connection problems detected).\n\nModel-based suspicions (1)"
+ },
+ "case2_wrong": {
+  "circuit": "Demo_10_Half_Subtractor__Wrong_Missing_Pin.v",
+  "findings": [
+   {
+    "id": "F001",
+    "check": "missing_pin",
+    "severity": "error",
+    "evidence": "Input pin B of U1 (XOR2_X1M_A9TH) is explicitly left empty."
+   }
+  ],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\nELECTRICAL (1)\nERROR\nfact\nF001\nmissing_pin\nIn simple terms: A required gate connection is empty. The gate cannot perform its intended logic until that pin is wired correctly.\nInput pin B of U1 (XOR2_X1M_A9TH) is explicitly left empty.\n Explain\n How do I fix this?\nModel-based suspicions (1)"
+ },
+ "case3_correct": {
+  "circuit": "Demo_06_2Bit_Counter__Correct.v",
+  "findings": [],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\n\nNo findings match (no connection problems detected).\n\nModel-based suspicions (0)"
+ },
+ "case3_wrong": {
+  "circuit": "Demo_11_2Bit_Counter__Wrong_Two_Drivers.v",
+  "findings": [
+   {
+    "id": "F001",
+    "check": "multi_driver",
+    "severity": "error",
+    "evidence": "Net next_count1 has 2 drivers: U2 (XOR2_X1M_A9TH).Y, U5 (BUF_X1M_A9TH).Y."
+   }
+  ],
+  "issues_panel": "All severities\nerror\nwarning\ninfo\nAll categories\nElectrical\nReachability\nStructural\nIntent\nELECTRICAL (1)\nERROR\nfact\nF001\nmulti_driver\nIn simple terms: Two parts of the circuit are trying to control the same wire \"next_count1\". That is like two people steering one car at once. Keep only the intended driver or add proper selection logic.\nNet next_count1 has 2 drivers: U2 (XOR2_X1M_A9TH).Y, U5 (BUF_X1M_A9TH).Y.\n Explain\n How do I fix this?\nModel-based suspicions (0)"
+ }
+}

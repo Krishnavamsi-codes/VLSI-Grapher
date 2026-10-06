@@ -207,30 +207,38 @@ HTML_CONTENT = """<!DOCTYPE html>
         <div class="grid grid-cols-2 gap-3">
           <!-- Baseline -->
           <div class="space-y-2">
-            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Node Accuracy</div>
+            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Accuracy / Weighted Recall / Micro-F1</div>
               <div id="base-acc" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
             </div>
-            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Micro-F1</div>
-              <div id="base-micro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Weighted Precision</div>
+              <div id="base-prec" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
             </div>
-            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80 text-center">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-slate-500 font-medium">Weighted F1-Score</div>
+              <div id="base-f1" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
               <div class="text-[10px] text-slate-500 font-medium">Macro-F1</div>
               <div id="base-macro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
             </div>
           </div>
           <!-- GNN-RE -->
           <div class="space-y-2">
-            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Node Accuracy</div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Accuracy / Weighted Recall / Micro-F1</div>
               <div id="metric-acc" class="text-lg font-bold text-emerald-400 mt-0.5 font-mono">--%</div>
             </div>
-            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Micro-F1</div>
-              <div id="metric-micro" class="text-lg font-bold text-cyan-400 mt-0.5 font-mono">--%</div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Weighted Precision</div>
+              <div id="metric-prec" class="text-lg font-bold text-sky-400 mt-0.5 font-mono">--%</div>
             </div>
-            <div class="bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-500/20 text-center">
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
+              <div class="text-[10px] text-indigo-400 font-medium">Weighted F1-Score</div>
+              <div id="metric-f1" class="text-lg font-bold text-pink-400 mt-0.5 font-mono">--%</div>
+            </div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
               <div class="text-[10px] text-indigo-400 font-medium">Macro-F1</div>
               <div id="metric-macro" class="text-lg font-bold text-purple-400 mt-0.5 font-mono">--%</div>
             </div>
@@ -819,21 +827,18 @@ HTML_CONTENT = """<!DOCTYPE html>
       // GNN-RE metrics (real 2k-epoch GraphSAINT predictions), or N/A for uploads
       const note = document.getElementById('gnnre-note');
       if (result.metrics) {
-        document.getElementById('metric-acc').textContent   = (result.metrics.accuracy * 100).toFixed(1) + '%';
-        document.getElementById('metric-micro').textContent = (result.metrics.f1_micro  * 100).toFixed(1) + '%';
-        document.getElementById('metric-macro').textContent = (result.metrics.f1_macro  * 100).toFixed(1) + '%';
+        [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k, m]) => document.getElementById('metric-' + k).textContent = (result.metrics[m] * 100).toFixed(1) + '%');
       } else {
-        ['metric-acc', 'metric-micro', 'metric-macro'].forEach(id => document.getElementById(id).textContent = 'N/A');
+        [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k]) => document.getElementById('metric-' + k).textContent = 'N/A');
       }
       note.textContent = result.gnn_re_message || '';
       note.classList.toggle('hidden', !result.gnn_re_message);
 
       // Baseline metrics (toy 2-layer GNN, 3 training epochs)
-      if (result.baseline) {
-        document.getElementById('base-acc').textContent   = (result.baseline.accuracy * 100).toFixed(1) + '%';
-        document.getElementById('base-micro').textContent = (result.baseline.f1_micro  * 100).toFixed(1) + '%';
-        document.getElementById('base-macro').textContent = (result.baseline.f1_macro  * 100).toFixed(1) + '%';
-      }
+      [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k, m]) => {
+        const v = result.baseline && result.baseline[m];
+        document.getElementById('base-' + k).textContent = (typeof v === 'number') ? (v * 100).toFixed(1) + '%' : 'N/A';
+      });
 
       const classNames = ["Adder", "Multiplier", "Control Logic", "Subtractor", "Comparator"];
       const colors = ["#38bdf8", "#10b981", "#f59e0b", "#a855f7", "#06b6d4"];
@@ -1097,6 +1102,12 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
             # ── Baseline: toy 2-layer GNN (3 training epochs) ──────────
             baseline_metrics = gnn_model.evaluate(feats, edges, labels)
+            # Labels are only real ground truth for dataset circuits (and uploads identical to one);
+            # for any other upload they are guessed from instance names, so scores would be fiction.
+            has_ground_truth = ref.csv_key is not None
+            if not has_ground_truth:
+                baseline_metrics = {'predictions': baseline_metrics['predictions'],
+                                    'probabilities': baseline_metrics['probabilities']}
 
             # ── GNN-RE: real 2000-epoch GraphSAINT predictions ──────────
             real_result = gnn_re_inference.lookup_circuit(ref.csv_key) if ref.csv_key else None
@@ -1112,7 +1123,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 gnn_re_metrics = real_result['metrics']
                 predictions = real_preds
                 prediction_source = 'graphsaint'
-                if ref.kind == 'demo':
+                if ref.kind == 'upload':
+                    gnn_re_message = f'Upload matches dataset circuit {ref.csv_key}; scored against its ground-truth labels.'
+                elif ref.kind == 'demo':
                     gnn_re_message = (f'GraphSAINT predictions of the unfaulted base circuit {ref.csv_key} '
                                       f'(the injected fault keeps gate order).')
                 print(f'[/api/infer] GNN-RE predictions for {ref.display_name}: '
@@ -1122,7 +1135,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 gnn_re_metrics = None
                 predictions = baseline_metrics['predictions']
                 prediction_source = 'baseline'
-                gnn_re_message = 'N/A: no GraphSAINT prediction for uploads. Sub-circuits use the baseline GNN.'
+                gnn_re_message = ('N/A: this upload is not a dataset circuit, so it has no ground-truth labels to score '
+                                  'against. Sub-circuits below use baseline GNN predictions.')
                 print(f'[/api/infer] No GraphSAINT predictions for {ref.display_name}; baseline only')
 
             # Sub-circuit boundaries driven by the best available predictions
