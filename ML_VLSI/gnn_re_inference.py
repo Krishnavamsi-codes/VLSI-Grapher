@@ -12,9 +12,11 @@ does NOT call argparse, and does NOT require PyTorch at startup.
 
 Public API
 ----------
-    lookup_circuit(circuit_name)
-        Returns a dict with real GNN-RE metrics and per-gate predictions for the
+    lookup_circuit(circuit_name, model="graphsaint")
+        Returns a dict with real metrics and per-gate predictions for the
         requested circuit.  Used by the /api/infer backend route.
+        model="novel" reads the GNN-RE-inspired round-3 model instead
+        (GNN-RE/runs/novel/final_fndir_h1s1, exported by export_web.py).
 
     available_circuits()
         Returns the list of circuit filenames present in the CSV.
@@ -23,13 +25,16 @@ Public API
 import os
 import numpy as np
 import pandas as pd
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import (accuracy_score, f1_score, precision_score, recall_score, confusion_matrix,
+                             precision_recall_fscore_support)
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _GRAPHSAINT_DIR = os.path.join(_HERE, "GNN-RE", "GraphSAINT")
+
+_NOVEL_DIR      = os.path.join(_HERE, "GNN-RE", "runs", "novel", "final_fndir_h1s1")
 
 _ALL_NODES_CSV   = os.path.join(_GRAPHSAINT_DIR, "predictions_all_nodes.csv")
 _TEST_GATES_CSV  = os.path.join(_GRAPHSAINT_DIR, "predictions_test_per_gate.csv")
@@ -42,17 +47,17 @@ NUM_CLASSES  = 5
 # ---------------------------------------------------------------------------
 # Load CSVs once at module import time
 # ---------------------------------------------------------------------------
-def _load_predictions():
-    if not os.path.exists(_ALL_NODES_CSV):
-        print("[gnn_re_inference] WARNING: CSV not found at", _ALL_NODES_CSV)
+def _load_predictions(all_nodes_csv=_ALL_NODES_CSV, test_gates_csv=_TEST_GATES_CSV, label="GNN-RE"):
+    if not os.path.exists(all_nodes_csv):
+        print("[gnn_re_inference] WARNING: CSV not found at", all_nodes_csv)
         return {}
 
-    all_df = pd.read_csv(_ALL_NODES_CSV)
+    all_df = pd.read_csv(all_nodes_csv)
 
     # Load per-class probabilities for test circuits if available
     prob_map = {}
-    if os.path.exists(_TEST_GATES_CSV):
-        test_df = pd.read_csv(_TEST_GATES_CSV)
+    if os.path.exists(test_gates_csv):
+        test_df = pd.read_csv(test_gates_csv)
         prob_cols = [c for c in test_df.columns if c.startswith("prob_")]
         if prob_cols:
             for circ, grp in test_df.groupby("circuit_file"):
@@ -82,12 +87,16 @@ def _load_predictions():
             "probabilities": probs,
         }
 
-    print("[gnn_re_inference] Loaded real GNN-RE predictions for", len(lookup), "circuits.")
+    print("[gnn_re_inference] Loaded real", label, "predictions for", len(lookup), "circuits.")
     return lookup
 
 
-# The single in-memory lookup built once at import time
+# In-memory lookups built once at import time
 CIRCUIT_LOOKUP = _load_predictions()
+NOVEL_LOOKUP = _load_predictions(os.path.join(_NOVEL_DIR, "predictions_all_nodes.csv"),
+                                 os.path.join(_NOVEL_DIR, "predictions_test_per_gate.csv"),
+                                 label="novel-model")
+LOOKUPS = {"graphsaint": CIRCUIT_LOOKUP, "novel": NOVEL_LOOKUP}
 
 
 # ---------------------------------------------------------------------------
@@ -98,17 +107,18 @@ def available_circuits():
     return sorted(CIRCUIT_LOOKUP.keys())
 
 
-def lookup_circuit(circuit_name):
+def lookup_circuit(circuit_name, model="graphsaint"):
     """
-    Return real GNN-RE results for circuit_name.
+    Return real stored-model results for circuit_name.
 
     Returns dict with keys: metrics, source, n_gates
     Returns None if circuit not in CSV.
     """
-    if circuit_name not in CIRCUIT_LOOKUP:
+    lookup = LOOKUPS.get(model, {})
+    if circuit_name not in lookup:
         return None
 
-    entry = CIRCUIT_LOOKUP[circuit_name]
+    entry = lookup[circuit_name]
     y_true = np.array(entry["true_class"], dtype=int)
     y_pred = np.array(entry["pred_class"], dtype=int)
     n = len(y_true)
@@ -126,6 +136,11 @@ def lookup_circuit(circuit_name):
     f1_w   = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
 
     conf = confusion_matrix(y_true, y_pred, labels=list(range(NUM_CLASSES)))
+    pc_p, pc_r, pc_f, pc_s = precision_recall_fscore_support(
+        y_true, y_pred, labels=list(range(NUM_CLASSES)), zero_division=0)
+    per_class = {CLASS_NAMES[k]: {"precision": float(pc_p[k]), "recall": float(pc_r[k]),
+                                  "f1": float(pc_f[k]), "support": int(pc_s[k])}
+                 for k in range(NUM_CLASSES)}
 
     probs = entry["probabilities"]
     if probs is None:
@@ -148,9 +163,12 @@ def lookup_circuit(circuit_name):
             "predictions":      y_pred.tolist(),
             "probabilities":    probs,
             "confusion_matrix": conf.tolist(),
+            "per_class":        per_class,
+            "errors":           int((y_true != y_pred).sum()),
         },
         "source":  "csv_lookup",
         "n_gates": n,
+        "split":   {"tr": "train", "va": "validation", "te": "test"}.get(entry["role"][0], entry["role"][0]),
     }
 
 

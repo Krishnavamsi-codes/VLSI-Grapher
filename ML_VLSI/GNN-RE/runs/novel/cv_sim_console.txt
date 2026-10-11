@@ -1,0 +1,30 @@
+C:\Users\KRISHNAVAMSI\anaconda3\envs\torch311\Lib\site-packages\scipy\sparse\_index.py:143: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil_matrix is more efficient.
+  self._set_arrayXarray(i, j, x)
+graph features built in 2.8s; PE (104727, 8), ST (104727, 7)
+sim_h3s3 w32: iters 1134 (0.9961596958174905, 0.990969663551797, 0.9935646796846438) (36s)
+sim_h3s3 w64: iters 2482 (0.9977174556854134, 0.9893663844455911, 0.9935419200655022) (40s)
+sim_h3s3 val: iters 2781 (0.9840041279669762, 0.9496702492055945, 0.9668371885862854) (82s)
+== sim_h3s3: no-smooth 0.98465  best sim_h3s3|a=0.4|t=5 0.98583
+pestsim_h3s3 w32: iters 924 (0.9958174904942966, 0.9890713879056602, 0.9924444391999784) (46s)
+pestsim_h3s3 w64: iters 917 (0.9983097614885657, 0.9917967164190944, 0.99505323895383) (28s)
+pestsim_h3s3 val: iters 3000 (0.9871001031991744, 0.9659503300109471, 0.9765252166050608) (1632s)
+== pestsim_h3s3: no-smooth 0.98801  best pestsim_h3s3|a=0.4|t=2 0.98875
+pestsim_h2s2 w32: iters 288 (0.9961596958174905, 0.9885885770609875, 0.992374136439239) (16s)
+pestsim_h2s2 w64: iters 212 (0.9978763669984543, 0.9905105560908807, 0.9941934615446675) (7s)
+pestsim_h2s2 val: iters 3000 (0.9881320949432405, 0.9695316200061777, 0.978831857474709) (68s)
+== pestsim_h2s2: no-smooth 0.98847  best pestsim_h2s2|a=0.6|t=10 0.98968
+pestsim_h1s1 w32: iters 1000 (0.9946768060836502, 0.9832497697351551, 0.9889632879094026) (19s)
+pestsim_h1s1 w64: iters 769 (0.9975152049233614, 0.9875510171107701, 0.9925331110170658) (12s)
+pestsim_h1s1 val: iters 393 (0.9726522187822497, 0.9503504066290892, 0.9615013127056695) (10s)
+== pestsim_h1s1: no-smooth 0.98100  best pestsim_h1s1|a=0.8|t=2 0.98400
+TOP 10 (CV only, test untouched):
+  0.98968  pestsim_h2s2|a=0.6|t=10
+  0.98966  pestsim_h2s2|a=0.6|t=5
+  0.98959  pestsim_h2s2|a=0.6|t=2
+  0.98956  pestsim_h2s2|a=0.4|t=10
+  0.98954  pestsim_h2s2|a=0.4|t=5
+  0.98951  pestsim_h2s2|a=0.4|t=2
+  0.98891  pestsim_h2s2|a=0.2|t=5
+  0.98891  pestsim_h2s2|a=0.2|t=10
+  0.98889  pestsim_h2s2|a=0.2|t=2
+  0.98875  pestsim_h3s3|a=0.4|t=2

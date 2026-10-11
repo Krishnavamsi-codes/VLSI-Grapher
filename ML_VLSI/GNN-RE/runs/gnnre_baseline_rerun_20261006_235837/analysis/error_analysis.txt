@@ -1,0 +1,28 @@
+ERROR ANALYSIS - clean rerun, best-val checkpoint (epoch 286)
+Test nodes 6538, errors 182 (2.78%). Paper Interconnected-Modules error: 1.13%
+
+Requested directions (share of all errors) vs paper:
+  ADD -> MUL: 70 (38.46%)   paper: 18%
+  MUL -> ADD: 63 (34.62%)   paper: 40%
+  ADD -> SUB: 3 (1.65%)   paper: not reported
+  SUB -> MUL: 11 (6.04%)   paper: not reported
+  SUB -> ADD: 17 (9.34%)   paper: not reported
+  COMP -> MUL: 0 (0.00%)   paper: 0% (never)
+  COMP -> ADD: 0 (0.00%)   paper: rare
+
+All non-zero off-diagonal directions:
+  ADD -> MUL: 70 (38.46%)
+  MUL -> ADD: 63 (34.62%)
+  SUB -> ADD: 17 (9.34%)
+  SUB -> MUL: 11 (6.04%)
+  CTRL -> MUL: 4 (2.20%)
+  CTRL -> ADD: 4 (2.20%)
+  ADD -> SUB: 3 (1.65%)
+  SUB -> CTRL: 2 (1.10%)
+  MUL -> CTRL: 2 (1.10%)
+  CTRL -> SUB: 2 (1.10%)
+  ADD -> CTRL: 2 (1.10%)
+  SUB -> COMP: 1 (0.55%)
+  COMP -> CTRL: 1 (0.55%)
+
+Verdict: the paper pattern (MUL->ADD dominant at 40%, ADD->MUL 18%) is NOT reproduced: here ADD->MUL (38.5%) and MUL->ADD (34.6%) are both large, together 73.1% of errors. COMP->MUL = 0 matches the paper.

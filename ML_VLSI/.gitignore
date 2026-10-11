@@ -8,3 +8,7 @@ uploads/
 verification/*.log
 server.log
 server.err
+
+# GNN-RE (vendored from DfX-NYUAD/GNN-RE): skip dead artefacts and large regenerable parser output
+GNN-RE/improved/
+GNN-RE/Netlist_to_graph/Graphs_datasets/*/cell.npy

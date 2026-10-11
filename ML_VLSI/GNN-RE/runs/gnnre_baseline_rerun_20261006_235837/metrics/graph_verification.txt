@@ -1,0 +1,8 @@
+GRAPH VERIFICATION
+adj_full symmetric (undirected): True (asymmetric entries: 0)
+adj_train symmetric: True (asymmetric entries: 0)
+adj_full nonzeros: 436776   adj_train nonzeros: 403630
+Self-loops in adj_full: 1638 (parser adds one for gates driving a primary output)
+adj_train entries touching a non-train node: 0
+Train/val/test masks disjoint: True
+All nodes assigned to a split: True

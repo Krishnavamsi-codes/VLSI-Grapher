@@ -1,0 +1,13 @@
+Test nodes: 6538
+Accuracy: 97.22%
+Micro-F1: 97.22%
+Macro-F1: 95.54%
+(repo calc_f1 cross-check: micro 97.22%, macro 95.54%)
+Errors: 182 (2.78%)
+
+Per class (P / R / F1 / support):
+  ADD: 88.02 / 89.16 / 88.59 / 692
+  MUL: 98.35 / 98.73 / 98.54 / 5119
+  CTRL: 97.06 / 95.85 / 96.45 / 241
+  SUB: 98.55 / 91.64 / 94.97 / 371
+  COMP: 99.13 / 99.13 / 99.13 / 115

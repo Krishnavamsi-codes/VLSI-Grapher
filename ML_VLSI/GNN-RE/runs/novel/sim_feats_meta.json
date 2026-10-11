@@ -1,0 +1,395 @@
+{
+ "features": [
+  "p_main",
+  "p_carry",
+  "p_mean",
+  "entropy",
+  "corr_max",
+  "corr_mean_abs",
+  "corr_signed_mean",
+  "corr_pos_frac",
+  "corr_strong_frac",
+  "support_frac",
+  "support_log",
+  "fanout_po_frac",
+  "level_in",
+  "level_in_norm",
+  "level_out",
+  "level_out_norm",
+  "unknown_cell"
+ ],
+ "per_circuit": {
+  "Test_add_mul_16_bit_Syn_65nm.v": {
+   "gates": 863,
+   "pis": 33,
+   "pos": 32,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 863,
+   "seconds": 0.1
+  },
+  "Test_add_mul_2_bit_Syn_65nm.v": {
+   "gates": 13,
+   "pis": 5,
+   "pos": 4,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 13,
+   "seconds": 0.0
+  },
+  "Test_add_mul_combine_16_bit_Syn_65nm.v": {
+   "gates": 806,
+   "pis": 32,
+   "pos": 48,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 806,
+   "seconds": 0.1
+  },
+  "Test_add_mul_combine_2_bit_Syn_65nm.v": {
+   "gates": 9,
+   "pis": 4,
+   "pos": 6,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 9,
+   "seconds": 0.0
+  },
+  "Test_add_mul_comp_16_bit_Syn_65nm.v": {
+   "gates": 926,
+   "pis": 32,
+   "pos": 32,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 926,
+   "seconds": 0.1
+  },
+  "Test_add_mul_comp_sub_16_bit_Syn_65nm.v": {
+   "gates": 1161,
+   "pis": 32,
+   "pos": 32,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 1161,
+   "seconds": 0.1
+  },
+  "Test_add_mul_mix_16_bit_Syn_65nm.v": {
+   "gates": 1637,
+   "pis": 64,
+   "pos": 32,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 1637,
+   "seconds": 0.2
+  },
+  "Test_add_mul_mix_2_bit_Syn_65nm.v": {
+   "gates": 12,
+   "pis": 8,
+   "pos": 4,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 12,
+   "seconds": 0.0
+  },
+  "Test_add_mul_sub_16_bit_Syn_65nm.v": {
+   "gates": 1111,
+   "pis": 34,
+   "pos": 32,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 1111,
+   "seconds": 0.1
+  },
+  "Train_add_mul_1_bit_Syn_65nm.v": {
+   "gates": 3,
+   "pis": 3,
+   "pos": 1,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 3,
+   "seconds": 0.0
+  },
+  "Train_add_mul_32_bit_Syn_65nm.v": {
+   "gates": 3977,
+   "pis": 65,
+   "pos": 64,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 3977,
+   "seconds": 0.5
+  },
+  "Train_add_mul_4_bit_Syn_65nm.v": {
+   "gates": 79,
+   "pis": 9,
+   "pos": 8,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 79,
+   "seconds": 0.0
+  },
+  "Train_add_mul_64_bit_Syn_65nm.v": {
+   "gates": 10408,
+   "pis": 129,
+   "pos": 128,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 10408,
+   "seconds": 3.1
+  },
+  "Train_add_mul_combine_32_bit_Syn_65nm.v": {
+   "gates": 3437,
+   "pis": 64,
+   "pos": 96,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 3437,
+   "seconds": 0.8
+  },
+  "Train_add_mul_combine_4_bit_Syn_65nm.v": {
+   "gates": 67,
+   "pis": 8,
+   "pos": 12,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 67,
+   "seconds": 0.1
+  },
+  "Train_add_mul_combine_64_bit_Syn_65nm.v": {
+   "gates": 9752,
+   "pis": 128,
+   "pos": 192,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 9752,
+   "seconds": 3.0
+  },
+  "Train_add_mul_comp_2_bit_Syn_65nm.v": {
+   "gates": 16,
+   "pis": 4,
+   "pos": 4,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 16,
+   "seconds": 0.0
+  },
+  "Train_add_mul_comp_32_bit_Syn_65nm.v": {
+   "gates": 4278,
+   "pis": 64,
+   "pos": 64,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 4278,
+   "seconds": 0.9
+  },
+  "Train_add_mul_comp_4_bit_Syn_65nm.v": {
+   "gates": 87,
+   "pis": 8,
+   "pos": 8,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 87,
+   "seconds": 0.1
+  },
+  "Train_add_mul_comp_64_bit_Syn_65nm.v": {
+   "gates": 10336,
+   "pis": 128,
+   "pos": 128,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 10336,
+   "seconds": 3.1
+  },
+  "Train_add_mul_comp_sub_2_bit_Syn_65nm.v": {
+   "gates": 44,
+   "pis": 4,
+   "pos": 4,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 44,
+   "seconds": 0.0
+  },
+  "Train_add_mul_comp_sub_32_bit_Syn_65nm.v": {
+   "gates": 4953,
+   "pis": 64,
+   "pos": 64,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 4953,
+   "seconds": 1.2
+  },
+  "Train_add_mul_comp_sub_4_bit_Syn_65nm.v": {
+   "gates": 131,
+   "pis": 8,
+   "pos": 8,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 131,
+   "seconds": 0.0
+  },
+  "Train_add_mul_comp_sub_64_bit_Syn_65nm.v": {
+   "gates": 12520,
+   "pis": 128,
+   "pos": 128,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 12520,
+   "seconds": 4.9
+  },
+  "Train_add_mul_mix_32_bit_Syn_65nm.v": {
+   "gates": 5037,
+   "pis": 128,
+   "pos": 64,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 5037,
+   "seconds": 1.0
+  },
+  "Train_add_mul_mix_4_bit_Syn_65nm.v": {
+   "gates": 149,
+   "pis": 16,
+   "pos": 8,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 149,
+   "seconds": 0.0
+  },
+  "Train_add_mul_mix_64_bit_Syn_65nm.v": {
+   "gates": 14191,
+   "pis": 256,
+   "pos": 128,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 14191,
+   "seconds": 4.8
+  },
+  "Train_add_mul_sub_2_bit_Syn_65nm.v": {
+   "gates": 35,
+   "pis": 6,
+   "pos": 4,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 35,
+   "seconds": 0.0
+  },
+  "Train_add_mul_sub_32_bit_Syn_65nm.v": {
+   "gates": 4618,
+   "pis": 66,
+   "pos": 64,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 4618,
+   "seconds": 0.7
+  },
+  "Train_add_mul_sub_4_bit_Syn_65nm.v": {
+   "gates": 119,
+   "pis": 10,
+   "pos": 8,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 119,
+   "seconds": 0.0
+  },
+  "Train_add_mul_sub_64_bit_Syn_65nm.v": {
+   "gates": 12014,
+   "pis": 130,
+   "pos": 128,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 12014,
+   "seconds": 4.3
+  },
+  "Validate_add_mul_8_bit_Syn_65nm.v": {
+   "gates": 239,
+   "pis": 17,
+   "pos": 16,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 239,
+   "seconds": 0.1
+  },
+  "Validate_add_mul_combine_8_bit_Syn_65nm.v": {
+   "gates": 217,
+   "pis": 16,
+   "pos": 24,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 217,
+   "seconds": 0.1
+  },
+  "Validate_add_mul_comp_8_bit_Syn_65nm.v": {
+   "gates": 255,
+   "pis": 16,
+   "pos": 16,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 255,
+   "seconds": 0.1
+  },
+  "Validate_add_mul_comp_sub_8_bit_Syn_65nm.v": {
+   "gates": 342,
+   "pis": 16,
+   "pos": 16,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 342,
+   "seconds": 0.1
+  },
+  "Validate_add_mul_mix_8_bit_Syn_65nm.v": {
+   "gates": 576,
+   "pis": 32,
+   "pos": 16,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 576,
+   "seconds": 0.1
+  },
+  "Validate_add_mul_sub_8_bit_Syn_65nm.v": {
+   "gates": 309,
+   "pis": 18,
+   "pos": 16,
+   "seq": 0,
+   "loop_gates": 0,
+   "unknown_cells": 0,
+   "matched": 309,
+   "seconds": 0.1
+  }
+ },
+ "missing_nodes": 0,
+ "patterns": 2048
+}

@@ -1,0 +1,160 @@
+MODEL ARCHITECTURE (instantiated object, not inferred from TCAD.yml)
+TCAD.yml network: {'dim': 256, 'aggr': 'concat', 'loss': 'softmax', 'arch': '1-1-0', 'act': 'relu', 'attention': 8, 'bias': 'norm'}
+aggregator_cls: AttentionAggregator   mulhead: 8
+order_layer [1, 1, 0]  dims_feat [34, 512, 512, 256]  dims_weight [(34, 256), (512, 256), (512, 256)]
+Forward: conv_layers -> F.normalize(p=2, dim=1) -> classifier -> softmax (in loss / predict)
+Loss: softmax cross-entropy weighted by GraphSAINT norm_loss
+Optimizer: Adam lr=0.01  weight_decay(unused by optimizer)=0.0  dropout=0.1  grad-clip-norm=5
+
+| Layer | Class | Order | Input | Weight out | Output | Heads | Aggr | Act | Params |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | AttentionAggregator | 1 | 34 | 256 | 512 | 8 | concat | relu | 19456 |
+| 2 | AttentionAggregator | 1 | 512 | 256 | 512 | 8 | concat | relu | 264192 |
+| 3 | AttentionAggregator | 0 | 512 | 256 | 256 | 8 | concat | relu | 131840 |
+| 4 | HighOrderAggregator (classifier) | 0 | 256 | 5 | 5 | 1 | n/a | I (softmax in loss) | 1295 |
+
+Total parameters: 416783   Trainable: 416783
+
+Full module print:
+GraphSAINT(
+  (conv_layers): Sequential(
+    (0): AttentionAggregator(
+      (act): ReLU()
+      (att_act): LeakyReLU(negative_slope=0.2)
+      (mods): ModuleList(
+        (0-15): 16 x Linear(in_features=34, out_features=32, bias=True)
+      )
+      (f_dropout): Dropout(p=0.1, inplace=False)
+      (params): ParameterList(
+          (0): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (1): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (2): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (3): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (4): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (5): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (6): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (7): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (8): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (9): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (10): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (11): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (12): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (13): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (14): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (15): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (16): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (17): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (18): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (19): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (20): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (21): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (22): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (23): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (24): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (25): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (26): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (27): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (28): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (29): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (30): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (31): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (32): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (33): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (34): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (35): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (36): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (37): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (38): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (39): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+      )
+    )
+    (1): AttentionAggregator(
+      (act): ReLU()
+      (att_act): LeakyReLU(negative_slope=0.2)
+      (mods): ModuleList(
+        (0-15): 16 x Linear(in_features=512, out_features=32, bias=True)
+      )
+      (f_dropout): Dropout(p=0.1, inplace=False)
+      (params): ParameterList(
+          (0): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (1): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (2): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (3): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (4): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (5): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (6): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (7): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (8): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (9): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (10): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (11): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (12): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (13): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (14): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (15): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (16): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (17): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (18): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (19): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (20): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (21): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (22): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (23): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (24): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (25): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (26): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (27): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (28): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (29): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (30): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (31): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (32): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (33): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (34): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (35): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (36): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (37): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (38): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+          (39): Parameter containing: [torch.float32 of size 1x64 (cuda:0)]
+      )
+    )
+    (2): AttentionAggregator(
+      (act): ReLU()
+      (att_act): LeakyReLU(negative_slope=0.2)
+      (mods): ModuleList(
+        (0-7): 8 x Linear(in_features=512, out_features=32, bias=True)
+      )
+      (f_dropout): Dropout(p=0.1, inplace=False)
+      (params): ParameterList(
+          (0): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (1): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (2): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (3): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (4): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (5): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (6): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (7): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (8): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (9): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (10): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (11): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (12): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (13): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (14): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+          (15): Parameter containing: [torch.float32 of size 32 (cuda:0)]
+      )
+    )
+  )
+  (classifier): HighOrderAggregator(
+    (f_lin): ModuleList(
+      (0): Linear(in_features=256, out_features=5, bias=False)
+    )
+    (f_dropout): Dropout(p=0.1, inplace=False)
+    (params): ParameterList(
+        (0): Parameter containing: [torch.float32 of size 5 (cuda:0)]
+        (1): Parameter containing: [torch.float32 of size 5 (cuda:0)]
+        (2): Parameter containing: [torch.float32 of size 5 (cuda:0)]
+    )
+    (f_bias): ParameterList(  (0): Parameter containing: [torch.float32 of size 5 (cuda:0)])
+  )
+)

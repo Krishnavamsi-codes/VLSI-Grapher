@@ -1,0 +1,11 @@
+{
+  "best_epoch": 286,
+  "best_epoch_index0": 285,
+  "val_micro": 0.9659442724458205,
+  "val_acc": 0.9659442724458205,
+  "val_macro": 0.9332985540876233,
+  "val_loss": 0.012546151876449585,
+  "saved_at": "2026-10-07T00:14:03",
+  "train_seconds_so_far": 807.7930719852448,
+  "checkpoint": "C:\\Users\\KRISHNAVAMSI\\Downloads\\ML_VLSI-20260901T103252Z-1-001\\ML_VLSI\\GNN-RE\\runs\\gnnre_baseline_rerun_20261006_235837\\checkpoints\\best_model.pkl"
+}
