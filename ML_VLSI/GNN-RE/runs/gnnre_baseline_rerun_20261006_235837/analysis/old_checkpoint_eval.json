@@ -1,0 +1,17 @@
+{
+  "checkpoint": "C:\\Users\\KRISHNAVAMSI\\Downloads\\ML_VLSI-20260901T103252Z-1-001\\ML_VLSI\\GNN-RE\\GraphSAINT\\pytorch_models\\saved_model_2026-09-04 15-42-03.pkl",
+  "checkpoint_mtime": 1788521606.203066,
+  "val": {
+    "accuracy": 0.9607843137254902,
+    "micro": 0.9607843137254902,
+    "macro": 0.9075590671567358,
+    "errors": 76
+  },
+  "test": {
+    "accuracy": 0.9753747323340471,
+    "micro": 0.9753747323340471,
+    "macro": 0.9596993056038198,
+    "errors": 161
+  },
+  "old_csv_vs_old_checkpoint_disagreements": 178
+}

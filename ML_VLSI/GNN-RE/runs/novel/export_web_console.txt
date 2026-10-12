@@ -1,0 +1,7 @@
+C:\Users\KRISHNAVAMSI\anaconda3\envs\torch311\Lib\site-packages\scipy\sparse\_index.py:143: SparseEfficiencyWarning: Changing the sparsity structure of a csr_matrix is expensive. lil_matrix is more efficient.
+  self._set_arrayXarray(i, j, x)
+graph features built in 2.9s; PE (104727, 8), ST (104727, 7)
+test probs max |diff| vs final run: 0.00e+00; identical argmax on 6538/6538 test gates
+tr acc 1.0000  n=96251
+va acc 0.9923  n=1938
+te acc 0.9959  n=6538

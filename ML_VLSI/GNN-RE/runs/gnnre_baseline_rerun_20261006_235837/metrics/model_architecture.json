@@ -1,0 +1,58 @@
+{
+  "layers": [
+    {
+      "layer": 1,
+      "class": "AttentionAggregator",
+      "order": 1,
+      "input_dim": 34,
+      "weight_out_dim": 256,
+      "output_dim": 512,
+      "heads": 8,
+      "aggregation": "concat",
+      "activation": "relu",
+      "bias_mode": "norm",
+      "params": 19456
+    },
+    {
+      "layer": 2,
+      "class": "AttentionAggregator",
+      "order": 1,
+      "input_dim": 512,
+      "weight_out_dim": 256,
+      "output_dim": 512,
+      "heads": 8,
+      "aggregation": "concat",
+      "activation": "relu",
+      "bias_mode": "norm",
+      "params": 264192
+    },
+    {
+      "layer": 3,
+      "class": "AttentionAggregator",
+      "order": 0,
+      "input_dim": 512,
+      "weight_out_dim": 256,
+      "output_dim": 256,
+      "heads": 8,
+      "aggregation": "concat",
+      "activation": "relu",
+      "bias_mode": "norm",
+      "params": 131840
+    },
+    {
+      "layer": 4,
+      "class": "HighOrderAggregator (classifier)",
+      "order": 0,
+      "input_dim": 256,
+      "weight_out_dim": 5,
+      "output_dim": 5,
+      "heads": 1,
+      "aggregation": "n/a",
+      "activation": "I (softmax in loss)",
+      "bias_mode": "bias",
+      "params": 1295
+    }
+  ],
+  "total_params": 416783,
+  "trainable_params": 416783
+}

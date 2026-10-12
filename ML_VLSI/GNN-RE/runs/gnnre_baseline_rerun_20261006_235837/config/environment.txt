@@ -1,0 +1,16 @@
+Python: 3.11.15 (C:\Users\KRISHNAVAMSI\anaconda3\envs\torch311\python.exe)
+PyTorch: 2.1.2+cu121
+CUDA (torch build): 12.1
+CUDA available: True
+cuDNN: 8801
+GPU: NVIDIA GeForce RTX 4050 Laptop GPU
+GPU memory: 6.00 GiB
+NVIDIA driver: 576.52
+Device used for training and evaluation: cuda
+CPU: 13th Gen Intel(R) Core(TM) i7-13620H
+RAM (GB): 15.6
+OS: Windows-10-10.0.26200-SP0
+NumPy: 1.26.4   SciPy: 1.11.4   scikit-learn: 1.9.0
+Git commit, GraphSAINT (upstream clone): c9b1e340d7b951465ac4a9251eef93832e68b003
+Git commit, GNN-RE (authors repo): 567ece42ed2273f57ccdff28aebb781fbf3efd55
+Git commit, ML_VLSI (top-level project): 564a4d041aa63de9bc5cca2067bec28a85985d1c

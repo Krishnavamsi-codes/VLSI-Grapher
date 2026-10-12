@@ -1,0 +1,17 @@
+GRAPHSAINT VERIFICATION (live objects after Minibatch.set_sampler)
+TCAD.yml phase: {'end': 2000, 'sampler': 'rw', 'depth': 2, 'num_root': 3000}
+TCAD.yml params: {'lr': 0.01, 'dropout': 0.1, 'weight_decay': 0.0, 'sample_coverage': 50}
+Sampler method: rw  class rw_sampling -> backend graphsaint.cython_sampler.RW
+Root nodes (size_root): 3000
+Walk length (size_depth): 2
+Sample coverage: 50
+Subgraph node budget per batch (num_root*depth): 6000; batches/epoch: 17
+Sampler node pool == role["tr"]: True
+Root sampling: node_train[np.random.randint(0, n, size_root)] -> uniform WITH replacement (source: graphsaint/cython_sampler.py)
+Example subgraph: 7780 nodes, 14176 edges; all nodes in train split: True
+Induced subgraph check (edge count equals adj_train restricted to sampled nodes): True
+Edge-index mapping into adj_train consistent: True
+norm_loss_train: zero on val True, zero on test True, train min/max 1.206e-05/5.541e-04
+norm_aggr_train: 403630 nonzero of 403630 (GraphSAINT alpha)
+Training loss uses only sampled train nodes (sampler pool = train) and labels of those nodes.
+Pre-sampling time: 72.0s

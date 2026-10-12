@@ -7,6 +7,7 @@ import threading
 import pytest
 
 import circuit_store
+import gnn_re_inference
 
 
 @pytest.fixture(scope='module')
@@ -114,6 +115,20 @@ def test_benchmark_infer(server):
     assert m['precision'] != m['f1_macro'] or m['recall'] != m['f1_macro'] or m['f1_macro'] == 1.0
 
 
+@pytest.mark.skipif(not gnn_re_inference.NOVEL_LOOKUP, reason='novel-model predictions not exported')
+def test_benchmark_infer_reports_novel_model(server):
+    status, _, parsed, _ = _request(server, 'POST', '/api/infer',
+                                    {'circuit_name': 'Test_add_mul_mix_16_bit_Syn_65nm.v'})
+    assert status == 200 and parsed['novel_available'] is True
+    n = parsed['novel']
+    assert len(n['predictions']) == len(parsed['predictions']) == 1637
+    assert 'probabilities' not in n and set(n['per_class']) == set(gnn_re_inference.CLASS_NAMES)
+    assert sum(map(sum, n['confusion_matrix'])) == 1637
+    assert n['errors'] == 1637 - sum(n['confusion_matrix'][k][k] for k in range(5))
+    # sub-circuits and colouring stay on GraphSAINT
+    assert parsed['prediction_source'] == 'graphsaint'
+
+
 def test_demo_infer_uses_base_predictions(server):
     # Presentation-only demos have no matching GraphSAINT row; this legacy injected
     # benchmark demo intentionally does and verifies the base-prediction path.
@@ -154,6 +169,7 @@ def test_unmatched_upload_has_no_scores(server):
         status, _, parsed, _ = _request(server, 'POST', '/api/infer', {'upload_id': up['upload_id']})
         assert status == 200
         assert parsed['metrics'] is None and parsed['gnn_re_available'] is False
+        assert parsed['novel'] is None and parsed['novel_available'] is False
         assert parsed['gnn_re_message'].startswith('N/A: this upload is not a dataset circuit')
         # name-guessed labels are not ground truth, so the baseline is not scored either
         assert 'accuracy' not in parsed['baseline']

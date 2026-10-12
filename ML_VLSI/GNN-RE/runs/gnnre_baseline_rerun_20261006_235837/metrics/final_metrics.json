@@ -1,0 +1,109 @@
+{
+  "experiment_dir": "C:\\Users\\KRISHNAVAMSI\\Downloads\\ML_VLSI-20260901T103252Z-1-001\\ML_VLSI\\GNN-RE\\runs\\gnnre_baseline_rerun_20261006_235837",
+  "seed": 42,
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "best_epoch": 286,
+  "final_training_epoch": 2000,
+  "best_val_micro": 0.9659442724458205,
+  "best_val_acc": 0.9659442724458205,
+  "best_val_macro": 0.9332985540876233,
+  "test_accuracy": 0.9721627408993576,
+  "test_micro_f1": 0.9721627408993576,
+  "test_macro_f1": 0.955353908009019,
+  "test_micro_f1_repo_calc_f1": 0.9721627408993576,
+  "test_macro_f1_repo_calc_f1": 0.955353908009019,
+  "test_nodes": 6538,
+  "test_errors": 182,
+  "test_error_pct": 2.7837259100642395,
+  "per_class": {
+    "ADD": {
+      "precision": 0.8801711840228246,
+      "recall": 0.8916184971098265,
+      "f1": 0.8858578607322326,
+      "support": 692
+    },
+    "MUL": {
+      "precision": 0.983459817085036,
+      "recall": 0.987302207462395,
+      "f1": 0.9853772665236888,
+      "support": 5119
+    },
+    "CTRL": {
+      "precision": 0.9705882352941176,
+      "recall": 0.9585062240663901,
+      "f1": 0.964509394572025,
+      "support": 241
+    },
+    "SUB": {
+      "precision": 0.9855072463768116,
+      "recall": 0.9164420485175202,
+      "f1": 0.9497206703910615,
+      "support": 371
+    },
+    "COMP": {
+      "precision": 0.991304347826087,
+      "recall": 0.991304347826087,
+      "f1": 0.991304347826087,
+      "support": 115
+    }
+  },
+  "confusion_matrix": [
+    [
+      617,
+      70,
+      2,
+      3,
+      0
+    ],
+    [
+      63,
+      5054,
+      2,
+      0,
+      0
+    ],
+    [
+      4,
+      4,
+      231,
+      2,
+      0
+    ],
+    [
+      17,
+      11,
+      2,
+      340,
+      1
+    ],
+    [
+      0,
+      0,
+      1,
+      0,
+      114
+    ]
+  ],
+  "class_order": [
+    "ADD",
+    "MUL",
+    "CTRL",
+    "SUB",
+    "COMP"
+  ],
+  "timing_seconds": {
+    "data_loading": 0.21723103523254395,
+    "model_init": 0.6851296424865723,
+    "sampler_presample_and_norm": 71.95073914527893,
+    "training_wall": 6268.615047454834,
+    "training_step_time_only": 5993.497043371201,
+    "avg_epoch": 3.132866965174675,
+    "time_to_best_epoch": 847.1223404407501,
+    "final_eval": 0.37788915634155273
+  },
+  "train_start": "2026-10-06T23:59:56",
+  "train_end": "2026-10-07T01:44:24",
+  "checkpoint": "C:\\Users\\KRISHNAVAMSI\\Downloads\\ML_VLSI-20260901T103252Z-1-001\\ML_VLSI\\GNN-RE\\runs\\gnnre_baseline_rerun_20261006_235837\\checkpoints\\best_model.pkl",
+  "predictions": "C:\\Users\\KRISHNAVAMSI\\Downloads\\ML_VLSI-20260901T103252Z-1-001\\ML_VLSI\\GNN-RE\\runs\\gnnre_baseline_rerun_20261006_235837\\predictions\\test_predictions.csv"
+}

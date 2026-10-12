@@ -1,0 +1,7 @@
+Best epoch: 286
+Best validation Micro-F1: 0.965944
+Best validation accuracy: 0.965944
+Best validation Macro-F1: 0.933299
+Checkpoint path: C:\Users\KRISHNAVAMSI\Downloads\ML_VLSI-20260901T103252Z-1-001\ML_VLSI\GNN-RE\runs\gnnre_baseline_rerun_20261006_235837\checkpoints\best_model.pkl
+Final training epoch: 2000
+Checkpoint saved at: 2026-10-07T00:14:03

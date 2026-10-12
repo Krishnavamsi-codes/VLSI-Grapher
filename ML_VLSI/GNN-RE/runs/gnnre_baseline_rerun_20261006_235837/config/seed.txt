@@ -1,0 +1,10 @@
+SEED=42
+python random.seed(42)
+numpy.random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)
+Repository seed mechanism: none (graphsaint/globals.py has its seed lines commented out).
+Seeds are set once, before data loading / model construction / sampling, and never changed.
+cuDNN/cuSPARSE determinism is NOT forced (would alter execution); GPU sparse ops may be
+non-deterministic across runs, so bit-exact reruns are not guaranteed.
+Sampler RNG: graphsaint/cython_sampler.py (NumPy) uses np.random -> covered by numpy seed.

@@ -1,0 +1,36 @@
+==================================================
+GNN-RE BASELINE RERUN PREFLIGHT
+==================================================
+Dataset: Interconnected-Modules (C:\Users\KRISHNAVAMSI\Downloads\ML_VLSI-20260901T103252Z-1-001\ML_VLSI\GNN-RE\Netlist_to_graph\Graphs_datasets\Interconnected-Modules)
+Nodes: 104727
+Train: 96251
+Validation: 1938
+Test: 6538
+Features: 34
+Classes: 5
+
+Sampler: rw
+Walk length: 2
+Root nodes: 3000
+Coverage: 50
+
+Architecture: AttentionAggregator x3 + classifier
+Attention heads: 8
+Hidden dimension: 256
+Arch: 1-1-0
+
+Optimizer: Adam
+Learning rate: 0.01
+Dropout: 0.1
+Epochs: 2000
+
+Seed: 42
+Device: cuda (NVIDIA GeForce RTX 4050 Laptop GPU)
+
+TCAD.yml:
+C:\Users\KRISHNAVAMSI\Downloads\ML_VLSI-20260901T103252Z-1-001\ML_VLSI\GNN-RE\TCAD.yml  (sha256 76cf8de931415360d0d127c8dd784a2fcc8aa8c436e1a28b4d65ca9e57d85efa)
+
+Git commit:
+GNN-RE 567ece42ed2273f57ccdff28aebb781fbf3efd55 | GraphSAINT c9b1e340d7b951465ac4a9251eef93832e68b003
+Problems found: none
+==================================================

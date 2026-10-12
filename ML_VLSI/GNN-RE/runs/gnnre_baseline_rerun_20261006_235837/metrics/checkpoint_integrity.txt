@@ -1,0 +1,7 @@
+Checkpoint loaded: C:\Users\KRISHNAVAMSI\Downloads\ML_VLSI-20260901T103252Z-1-001\ML_VLSI\GNN-RE\runs\gnnre_baseline_rerun_20261006_235837\checkpoints\best_model.pkl
+Recorded best epoch (in memory): 286; in checkpoint metadata: 286; match: True
+Model in eval mode after eval_step (model.training == False): True
+Dropout modules: 4, all inactive in eval mode: True
+Gradients disabled: eval_step wraps the forward pass in torch.no_grad() (repository code)
+Determinism: predictions run1 == run2 on all nodes: True; max |prob1 - prob2| = 1.937e-07
+Validation Micro-F1 after reload: 0.965944; recorded at best epoch: 0.965944; difference +0.00e+00

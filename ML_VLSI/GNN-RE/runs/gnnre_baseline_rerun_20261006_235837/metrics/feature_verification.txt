@@ -1,0 +1,10 @@
+FEATURE VERIFICATION
+Raw feature matrix shape: (104727, 34), dtype float32
+Feature count: 34 (paper Table II: 33; repo column 2 = KEY)
+Constant columns (raw, all nodes): 10 -> [2, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+KEY column (2) unique values: [0.0]
+Scaling: graphsaint.utils.load_data fits StandardScaler on nodes that appear in adj_train
+  scaler-fit nodes: 96251 (train nodes: 96251; scaler nodes outside train split: 0; train nodes not used for fitting (no train edge): 0)
+  max |independent train-only scaler - training input| = 0.000e+00
+Scaled training-node stats: mean of column means 1.571e-07, column std range (non-constant) [0.9996, 1.0007]
+Scaled constant columns are exactly zero: True

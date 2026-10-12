@@ -1,0 +1,31 @@
+DATASET VERIFICATION (Interconnected-Modules, read directly from the files)
+Data dir: C:\Users\KRISHNAVAMSI\Downloads\ML_VLSI-20260901T103252Z-1-001\ML_VLSI\GNN-RE\Netlist_to_graph\Graphs_datasets\Interconnected-Modules
+Number of nodes: 104727
+adj_full: shape (104727, 104727), stored nonzeros 436776 (each undirected edge stored twice; 1638 self-loops) -> undirected edges incl. self-loops ~ 219207
+adj_train: stored nonzeros 403630
+Number of features: 34
+Number of classes: 5  (label counts all nodes: [6810, 91067, 2145, 3746, 959])
+Train nodes: 96251   Validation nodes: 1938   Test nodes: 6538   Sum: 104727
+Train circuits (22): ['Train_add_mul_1_bit_Syn_65nm.v', 'Train_add_mul_32_bit_Syn_65nm.v', 'Train_add_mul_4_bit_Syn_65nm.v', 'Train_add_mul_64_bit_Syn_65nm.v', 'Train_add_mul_combine_32_bit_Syn_65nm.v', 'Train_add_mul_combine_4_bit_Syn_65nm.v', 'Train_add_mul_combine_64_bit_Syn_65nm.v', 'Train_add_mul_comp_2_bit_Syn_65nm.v', 'Train_add_mul_comp_32_bit_Syn_65nm.v', 'Train_add_mul_comp_4_bit_Syn_65nm.v', 'Train_add_mul_comp_64_bit_Syn_65nm.v', 'Train_add_mul_comp_sub_2_bit_Syn_65nm.v', 'Train_add_mul_comp_sub_32_bit_Syn_65nm.v', 'Train_add_mul_comp_sub_4_bit_Syn_65nm.v', 'Train_add_mul_comp_sub_64_bit_Syn_65nm.v', 'Train_add_mul_mix_32_bit_Syn_65nm.v', 'Train_add_mul_mix_4_bit_Syn_65nm.v', 'Train_add_mul_mix_64_bit_Syn_65nm.v', 'Train_add_mul_sub_2_bit_Syn_65nm.v', 'Train_add_mul_sub_32_bit_Syn_65nm.v', 'Train_add_mul_sub_4_bit_Syn_65nm.v', 'Train_add_mul_sub_64_bit_Syn_65nm.v']
+Validation circuits (6): ['Validate_add_mul_8_bit_Syn_65nm.v', 'Validate_add_mul_combine_8_bit_Syn_65nm.v', 'Validate_add_mul_comp_8_bit_Syn_65nm.v', 'Validate_add_mul_comp_sub_8_bit_Syn_65nm.v', 'Validate_add_mul_mix_8_bit_Syn_65nm.v', 'Validate_add_mul_sub_8_bit_Syn_65nm.v']
+Test circuits (9): ['Test_add_mul_16_bit_Syn_65nm.v', 'Test_add_mul_2_bit_Syn_65nm.v', 'Test_add_mul_combine_16_bit_Syn_65nm.v', 'Test_add_mul_combine_2_bit_Syn_65nm.v', 'Test_add_mul_comp_16_bit_Syn_65nm.v', 'Test_add_mul_comp_sub_16_bit_Syn_65nm.v', 'Test_add_mul_mix_16_bit_Syn_65nm.v', 'Test_add_mul_mix_2_bit_Syn_65nm.v', 'Test_add_mul_sub_16_bit_Syn_65nm.v']
+Total circuits: 37
+Class counts  train [5898, 84466, 1784, 3307, 796]  val [220, 1482, 120, 68, 48]  test [692, 5119, 241, 371, 115]  (order ['ADD', 'MUL', 'CTRL', 'SUB', 'COMP'])
+Nodes in more than one split: 0
+Circuits whose nodes span more than one split: 0 []
+Circuits whose filename prefix disagrees with their split: []
+SHA-256 feats.npy: c9f340ddd63d4509490c0e36c87c091a7e4434faef0ec27f3c9ed998db8b39db
+SHA-256 role.json: f47eb4a6f072a91b8815d2f8140e680b5398c77d658a5bd0ef9e61fe83368a8d
+SHA-256 class_map.json: b5b85aff9f79b5be152b92db60869c392d82e7126ad873af75445c2c4242947d
+SHA-256 adj_full.npz: fa452b9816a3d2000fc39bbd5a9aef0c0a8b0263908bcd8c62cd6cfad881e39d
+SHA-256 adj_train.npz: 94877e8cf5761002793d7835b1a5c373e58942e44a9a1bb2677389fbb243d183
+
+Expected vs measured:
+  nodes: expected 104727, measured 104727, OK
+  train: expected 96251, measured 96251, OK
+  val: expected 1938, measured 1938, OK
+  test: expected 6538, measured 6538, OK
+  classes: expected 5, measured 5, OK
+  train_circuits: expected 22, measured 22, OK
+  val_circuits: expected 6, measured 6, OK
+  test_circuits: expected 9, measured 9, OK

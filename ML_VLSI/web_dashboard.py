@@ -194,55 +194,66 @@ HTML_CONTENT = """<!DOCTYPE html>
         </h3>
 
         <!-- Column headers -->
-        <div class="grid grid-cols-2 gap-3 text-center text-[10px] font-semibold mb-1">
-          <div class="bg-slate-800/60 rounded-lg py-1.5 text-slate-400 border border-slate-700/60">
-            <i class="fa-solid fa-microchip mr-1 text-slate-500"></i> Baseline GNN <span class="text-slate-600">(2-layer, 3ep)</span>
+        <div class="grid grid-cols-3 gap-2 text-center text-[10px] font-semibold mb-1">
+          <div class="bg-slate-800/60 rounded-lg py-1.5 px-1 text-slate-400 border border-slate-700/60 leading-tight">
+            <i class="fa-solid fa-microchip mr-1 text-slate-500"></i>Baseline GNN<br><span class="text-slate-600">(2-layer, 3ep)</span>
           </div>
-          <div class="bg-indigo-950/60 rounded-lg py-1.5 text-indigo-300 border border-indigo-500/30">
-            <i class="fa-solid fa-brain mr-1 text-indigo-400"></i> GNN-RE <span class="text-indigo-500">(GraphSAINT, 2k ep)</span>
+          <div class="bg-indigo-950/60 rounded-lg py-1.5 px-1 text-indigo-300 border border-indigo-500/30 leading-tight">
+            <i class="fa-solid fa-brain mr-1 text-indigo-400"></i>GNN-RE<br><span class="text-indigo-500">(GraphSAINT, 2k ep)</span>
+          </div>
+          <div class="bg-emerald-950/60 rounded-lg py-1.5 px-1 text-emerald-300 border border-emerald-500/30 leading-tight" title="GNN-RE-inspired model: logic-simulation and Boolean-influence features with direction-aware multi-hop propagation, classified by LightGBM (5 seeds). Not a GNN.">
+            <i class="fa-solid fa-wand-magic-sparkles mr-1 text-emerald-400"></i>Novel model<br><span class="text-emerald-500">(sim + influence, LGBM)</span>
           </div>
         </div>
 
-        <!-- Metric rows -->
-        <div class="grid grid-cols-2 gap-3">
-          <!-- Baseline -->
-          <div class="space-y-2">
-            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Accuracy / Weighted Recall / Micro-F1</div>
-              <div id="base-acc" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Weighted Precision</div>
-              <div id="base-prec" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Weighted F1-Score</div>
-              <div id="base-f1" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-slate-950/80 border-slate-800/80 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-slate-500 font-medium">Macro-F1</div>
-              <div id="base-macro" class="text-lg font-bold text-slate-400 mt-0.5 font-mono">--%</div>
-            </div>
+        <!-- Metric rows: Baseline | GNN-RE | Novel -->
+        <div class="space-y-2">
+          <div class="text-[10px] text-slate-500 font-medium text-center -mb-1">Accuracy / Weighted Recall / Micro-F1</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2 rounded-xl border text-center"><div id="base-acc" class="text-base font-bold text-slate-400 font-mono">--%</div></div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2 rounded-xl border text-center"><div id="metric-acc" class="text-base font-bold text-indigo-300 font-mono">--%</div></div>
+            <div class="bg-emerald-950/40 border-emerald-500/30 p-2 rounded-xl border text-center"><div id="novel-acc" class="text-base font-bold text-emerald-400 font-mono">--%</div></div>
           </div>
-          <!-- GNN-RE -->
-          <div class="space-y-2">
-            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Accuracy / Weighted Recall / Micro-F1</div>
-              <div id="metric-acc" class="text-lg font-bold text-emerald-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Weighted Precision</div>
-              <div id="metric-prec" class="text-lg font-bold text-sky-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Weighted F1-Score</div>
-              <div id="metric-f1" class="text-lg font-bold text-pink-400 mt-0.5 font-mono">--%</div>
-            </div>
-            <div class="bg-indigo-950/40 border-indigo-500/20 p-2.5 rounded-xl border text-center">
-              <div class="text-[10px] text-indigo-400 font-medium">Macro-F1</div>
-              <div id="metric-macro" class="text-lg font-bold text-purple-400 mt-0.5 font-mono">--%</div>
-            </div>
+          <div class="text-[10px] text-slate-500 font-medium text-center -mb-1">Weighted Precision</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2 rounded-xl border text-center"><div id="base-prec" class="text-base font-bold text-slate-400 font-mono">--%</div></div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2 rounded-xl border text-center"><div id="metric-prec" class="text-base font-bold text-indigo-300 font-mono">--%</div></div>
+            <div class="bg-emerald-950/40 border-emerald-500/30 p-2 rounded-xl border text-center"><div id="novel-prec" class="text-base font-bold text-emerald-400 font-mono">--%</div></div>
           </div>
+          <div class="text-[10px] text-slate-500 font-medium text-center -mb-1">Weighted F1-Score</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2 rounded-xl border text-center"><div id="base-f1" class="text-base font-bold text-slate-400 font-mono">--%</div></div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2 rounded-xl border text-center"><div id="metric-f1" class="text-base font-bold text-indigo-300 font-mono">--%</div></div>
+            <div class="bg-emerald-950/40 border-emerald-500/30 p-2 rounded-xl border text-center"><div id="novel-f1" class="text-base font-bold text-emerald-400 font-mono">--%</div></div>
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium text-center -mb-1">Macro-F1</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2 rounded-xl border text-center"><div id="base-macro" class="text-base font-bold text-slate-400 font-mono">--%</div></div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2 rounded-xl border text-center"><div id="metric-macro" class="text-base font-bold text-indigo-300 font-mono">--%</div></div>
+            <div class="bg-emerald-950/40 border-emerald-500/30 p-2 rounded-xl border text-center"><div id="novel-macro" class="text-base font-bold text-emerald-400 font-mono">--%</div></div>
+          </div>
+          <div class="text-[10px] text-slate-500 font-medium text-center -mb-1">Misclassified gates</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-950/80 border-slate-800/80 p-2 rounded-xl border text-center"><div id="base-err" class="text-base font-bold text-slate-400 font-mono">--</div></div>
+            <div class="bg-indigo-950/40 border-indigo-500/20 p-2 rounded-xl border text-center"><div id="metric-err" class="text-base font-bold text-indigo-300 font-mono">--</div></div>
+            <div class="bg-emerald-950/40 border-emerald-500/30 p-2 rounded-xl border text-center"><div id="novel-err" class="text-base font-bold text-emerald-400 font-mono">--</div></div>
+          </div>
+        </div>
+
+        <!-- Per-class F1 (hover a cell for precision / recall) -->
+        <div class="pt-2 border-t border-slate-800/80">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">Per-class F1 <span class="text-slate-600 font-normal">(hover for precision / recall)</span></div>
+          <table class="w-full text-[11px] font-mono">
+            <thead><tr class="text-[10px] text-slate-500">
+              <th class="text-left font-medium py-0.5">Class</th>
+              <th class="text-right font-medium">Base</th>
+              <th class="text-right font-medium text-indigo-400">GNN-RE</th>
+              <th class="text-right font-medium text-emerald-400">Novel</th>
+            </tr></thead>
+            <tbody id="per-class-body">
+              <tr><td colspan="4" class="text-slate-500 italic py-1">Run GNN to see per-class scores.</td></tr>
+            </tbody>
+          </table>
         </div>
 
         <div id="gnnre-note" class="hidden text-[10px] text-amber-300/90 leading-snug"></div>
@@ -824,21 +835,54 @@ HTML_CONTENT = """<!DOCTYPE html>
 
       currentSubcircuits = result.subcircuits;
 
-      // GNN-RE metrics (real 2k-epoch GraphSAINT predictions), or N/A for uploads
+      // Metrics for the three models: toy baseline, GNN-RE (stored GraphSAINT predictions) and the novel
+      // model (stored round-3 predictions). Stored models are N/A for uploads that are not dataset circuits.
       const note = document.getElementById('gnnre-note');
-      if (result.metrics) {
-        [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k, m]) => document.getElementById('metric-' + k).textContent = (result.metrics[m] * 100).toFixed(1) + '%');
-      } else {
-        [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k]) => document.getElementById('metric-' + k).textContent = 'N/A');
-      }
-      note.textContent = result.gnn_re_message || '';
-      note.classList.toggle('hidden', !result.gnn_re_message);
-
-      // Baseline metrics (toy 2-layer GNN, 3 training epochs)
-      [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']].forEach(([k, m]) => {
-        const v = result.baseline && result.baseline[m];
-        document.getElementById('base-' + k).textContent = (typeof v === 'number') ? (v * 100).toFixed(1) + '%' : 'N/A';
+      const metricKeys = [['acc', 'accuracy'], ['prec', 'precision_weighted'], ['f1', 'f1_weighted'], ['macro', 'f1_macro']];
+      const pct = v => (typeof v === 'number') ? (v * 100).toFixed(1) + '%' : 'N/A';
+      const errorsOf = m => {
+        if (!m || !Array.isArray(m.confusion_matrix)) return 'N/A';
+        let e = 0;
+        m.confusion_matrix.forEach((row, i) => row.forEach((c, j) => { if (i !== j) e += c; }));
+        return String(e);
+      };
+      const models = { base: result.baseline, metric: result.metrics, novel: result.novel };
+      Object.entries(models).forEach(([prefix, m]) => {
+        metricKeys.forEach(([k, key]) => document.getElementById(prefix + '-' + k).textContent = pct(m && m[key]));
+        document.getElementById(prefix + '-err').textContent = errorsOf(m);
       });
+      const splitNote = result.split === 'train'
+        ? 'Training circuit: GNN-RE and novel-model scores are in-sample (the models were fitted on it). Use test circuits for a fair comparison.'
+        : (result.split === 'validation' ? 'Validation circuit: used for early stopping, not a held-out test score.' : '');
+      const noteText = [result.gnn_re_message, splitNote].filter(Boolean).join(' ');
+      note.textContent = noteText;
+      note.classList.toggle('hidden', !noteText);
+
+      // Per-class precision / recall / F1 from each model's confusion matrix (rows = true, cols = predicted)
+      const perClass = (m, c) => {
+        if (!m || !Array.isArray(m.confusion_matrix)) return null;
+        const cm = m.confusion_matrix;
+        const tp = cm[c][c];
+        const support = cm[c].reduce((x, y) => x + y, 0);
+        const predicted = cm.reduce((x, row) => x + row[c], 0);
+        if (support === 0 && predicted === 0) return null;
+        const p = predicted ? tp / predicted : 0, r = support ? tp / support : 0;
+        return { p, r, f1: (p + r) ? 2 * p * r / (p + r) : 0, support };
+      };
+      const tone = { base: 'text-slate-400', metric: 'text-indigo-300', novel: 'text-emerald-400' };
+      let pcHtml = '';
+      ["Adder", "Multiplier", "Control Logic", "Subtractor", "Comparator"].forEach((name, c) => {
+        const cells = ['base', 'metric', 'novel'].map(prefix => [prefix, perClass(models[prefix], c)]);
+        if (cells.every(([, x]) => x === null)) return;
+        // class counts from the stored models' dataset ground truth; the baseline's labels are name-guessed
+        const sup = ([cells[2][1], cells[1][1], cells[0][1]].find(x => x) || {}).support;
+        pcHtml += `<tr><td class="py-0.5 text-slate-300">${name} <span class="text-slate-600">(${sup ?? 0})</span></td>` +
+          cells.map(([prefix, x]) => x
+            ? `<td class="text-right ${tone[prefix]}" title="precision ${(x.p * 100).toFixed(2)}% / recall ${(x.r * 100).toFixed(2)}%">${(x.f1 * 100).toFixed(1)}</td>`
+            : `<td class="text-right text-slate-600">N/A</td>`).join('') + '</tr>';
+      });
+      document.getElementById('per-class-body').innerHTML =
+        pcHtml || '<tr><td colspan="4" class="text-slate-500 italic py-1">No ground-truth labels for this circuit.</td></tr>';
 
       const classNames = ["Adder", "Multiplier", "Control Logic", "Subtractor", "Comparator"];
       const colors = ["#38bdf8", "#10b981", "#f59e0b", "#a855f7", "#06b6d4"];
@@ -1139,6 +1183,15 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                                   'against. Sub-circuits below use baseline GNN predictions.')
                 print(f'[/api/infer] No GraphSAINT predictions for {ref.display_name}; baseline only')
 
+            # ── Novel model: GNN-RE-inspired round-3 predictions (runs/novel/final_fndir_h1s1) ──
+            novel_result = gnn_re_inference.lookup_circuit(ref.csv_key, model='novel') if ref.csv_key else None
+            novel_metrics = novel_result['metrics'] if novel_result is not None else None
+            if novel_metrics is not None:
+                novel_preds = novel_metrics['predictions'][:len(nodes)]
+                novel_preds += [int(labels[i]) for i in range(len(novel_preds), len(nodes))]
+                novel_metrics['predictions'] = novel_preds
+                novel_metrics.pop('probabilities', None)          # not needed by the page; keeps the payload small
+
             # Sub-circuit boundaries driven by the best available predictions
             subcircuits = extract_subcircuit_boundaries(nodes, edges, predictions)
 
@@ -1149,7 +1202,10 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 'predictions': predictions,
                 'prediction_source': prediction_source,
                 'gnn_re_available': gnn_re_metrics is not None,
-                'gnn_re_message': gnn_re_message
+                'gnn_re_message': gnn_re_message,
+                'novel': novel_metrics,
+                'novel_available': novel_metrics is not None,
+                'split': (real_result or novel_result or {}).get('split'),   # train / validation / test circuit
             })
 
         elif path == '/api/analyze':
