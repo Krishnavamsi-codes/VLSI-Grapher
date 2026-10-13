@@ -1,4 +1,16 @@
 {
+ "Demo_12_2Bit_Adder__Correct.v": {
+  "base": null,
+  "fault": "presentation_adder_correct",
+  "description": "Correct 2-bit ripple-carry adder. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
+ "Demo_13_4Bit_Parity__Correct.v": {
+  "base": null,
+  "fault": "presentation_parity_correct",
+  "description": "Correct 4-bit parity generator. Expected result: no electrical connection errors.",
+  "expected_check": null
+ },
  "Demo_06_2Bit_Counter__Correct.v": {
   "base": null,
   "fault": "presentation_counter_correct",
