@@ -91,16 +91,16 @@
    "to_pin": "A"
   }
  },
- "Demo_10_Half_Subtractor__Wrong_Missing_Pin.v": {
+ "Demo_10_2Bit_Adder__Wrong_Undriven_Output.v": {
   "base": null,
-  "fault": "presentation_subtractor_missing_pin",
-  "description": "Broken half subtractor: pin B of U1 is left blank (.B()). Expected result: missing_pin error.",
-  "expected_check": "missing_pin"
+  "fault": "presentation_adder_undriven_output",
+  "description": "Broken 2-bit adder: sum[1] has no driver because U2 writes to unused_sum1. Expected result: undriven_po error.",
+  "expected_check": "undriven_po"
  },
- "Demo_11_2Bit_Counter__Wrong_Two_Drivers.v": {
+ "Demo_11_4Bit_Parity__Wrong_Dead_Logic.v": {
   "base": null,
-  "fault": "presentation_counter_two_drivers",
-  "description": "Broken 2-bit counter: U2 (XOR) and an extra U5 (BUF) both drive next_count1. Expected result: multi_driver error.",
-  "expected_check": "multi_driver"
+  "fault": "presentation_parity_dead_logic",
+  "description": "Broken 4-bit parity circuit: U4/U5 form a branch that cannot reach parity. Expected result: no_path_to_po warning.",
+  "expected_check": "no_path_to_po"
  }
 }
