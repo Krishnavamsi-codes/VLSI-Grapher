@@ -1,4 +1,10 @@
 {
+ "Demo_14_2Bit_Adder__Two_Combined_Faults.v": {
+  "base": null,
+  "fault": "presentation_adder_two_combined_faults",
+  "description": "Broken 2-bit adder with two independent faults: U2 reads a floating carry input and sum[1] is undriven.",
+  "expected_checks": ["floating_net", "undriven_po"]
+ },
  "Demo_12_2Bit_Adder__Correct.v": {
   "base": null,
   "fault": "presentation_adder_correct",

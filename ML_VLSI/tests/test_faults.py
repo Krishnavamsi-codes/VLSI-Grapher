@@ -103,11 +103,13 @@ def test_findings_have_contract_fields():
 def test_demo_faults_are_detected():
     with open(DEMO_MANIFEST, encoding='utf-8') as fh:
         manifest = json.load(fh)
-    assert len(manifest) == 16
+    assert len(manifest) == 17
     for name, meta in manifest.items():
         out = run_checks(build_circuit_model(os.path.join(DEMO_DIR, name)))
-        if meta['expected_check']:
-            assert any(f['check'] == meta['expected_check'] for f in out['findings']), name
+        expected = meta.get('expected_checks') or ([meta['expected_check']] if meta.get('expected_check') else [])
+        if expected:
+            for check in expected:
+                assert any(f['check'] == check for f in out['findings']), (name, check)
         else:
             assert not [f for f in out['findings'] if f['severity'] == 'error'], name
         if 'expected_edge' in meta:
