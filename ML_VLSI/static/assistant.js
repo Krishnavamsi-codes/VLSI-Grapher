@@ -66,6 +66,35 @@
     return out.replace(/\[unverified\]/g, '<span class="unverified" title="Reference removed: not found in this circuit">[unverified]</span>');
   }
 
+  // The model returns a small Markdown subset. Render it after escaping/chipping the
+  // source so formatting never becomes executable HTML.
+  function replyHtml(text) {
+    const inline = line => chipify(line)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    const out = [];
+    let list = null;
+    const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (const raw of String(text || '').replace(/\r/g, '').split('\n')) {
+      const line = raw.trim();
+      const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+      const bullet = line.match(/^[-*]\s+(.+)$/);
+      const heading = line.match(/^#{1,3}\s+(.+)$/);
+      if (ordered || bullet) {
+        const next = ordered ? 'ol' : 'ul';
+        if (list !== next) { closeList(); out.push(`<${next}>`); list = next; }
+        out.push(`<li>${inline((ordered || bullet)[1])}</li>`);
+      } else {
+        closeList();
+        if (!line) continue;
+        if (heading) out.push(`<h4>${inline(heading[1])}</h4>`);
+        else out.push(`<p>${inline(line)}</p>`);
+      }
+    }
+    closeList();
+    return out.join('');
+  }
+
   const sevBadge = s => `<span class="sev sev-${esc(s)}">${esc(s)}</span>`;
   const certChip = c => `<span class="cert cert-${esc(c)}" title="${{ fact: 'Deterministic fact', likely: 'Structural/intent inference', suspicion: 'Model-based suspicion' }[c] || ''}">${esc(c)}</span>`;
 
@@ -724,7 +753,7 @@
             <div class="ins-line"><span class="k">Impact</span>${esc(c.impact)} <span class="muted">(confidence ${esc(c.confidence)})</span></div>`
           : c.lines.slice(0, 8).map(l => `<div class="ins-line">${chipify(gref(l))}</div>`).join('')}
         </div>`).join('')}</div>` : '';
-      pending.innerHTML = `${ev.length ? `<div class="ai-label">${basisChip('AI explanation')}</div>` : ''}<div class="reply">${chipify(r.reply)}</div>${droppedNote(r.dropped_refs)}${evHtml}${tools}`;
+      pending.innerHTML = `${ev.length ? `<div class="ai-label">${basisChip('AI explanation')}</div>` : ''}<div class="reply">${replyHtml(r.reply)}</div>${droppedNote(r.dropped_refs)}${evHtml}${tools}`;
       pending.querySelectorAll('[data-ev]').forEach(n => n.addEventListener('click', e => {
         if (e.target.closest('.ref-chip')) return;
         const c = ev[Number(n.dataset.ev)];

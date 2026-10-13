@@ -90,6 +90,13 @@ details summary { cursor: pointer; color: #fdba74; font-weight: 600; margin: 10p
 .msg-user { align-self: flex-end; background: #312e81; color: #e0e7ff; }
 .msg-assistant { align-self: flex-start; background: #0f172a; border: 1px solid #1e293b; }
 .msg .err { color: #fca5a5; }
+.reply p { margin: 0 0 8px; }
+.reply p:last-child { margin-bottom: 0; }
+.reply h4 { color: #f8fafc; font-size: 12px; font-weight: 700; margin: 0 0 7px; }
+.reply strong { color: #f8fafc; font-weight: 700; }
+.reply code { color: #c4b5fd; background: #1e1b4b; border-radius: 4px; padding: 1px 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.reply ul, .reply ol { margin: 0 0 8px 18px; padding: 0; }
+.reply li { margin: 3px 0; }
 .trace { margin-top: 6px; font-size: 10px; color: #64748b; font-family: 'JetBrains Mono', monospace; }
 .trace summary { color: #64748b; font-weight: 400; margin: 0; }
 .starters { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
