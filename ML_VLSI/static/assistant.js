@@ -272,7 +272,7 @@
     } catch (e) {
       if (token === S.token) S.insightsError = e.message;
     } finally {
-      if (token === S.token) { renderInsights(); renderStarters(); }
+      if (token === S.token) { renderBom(); renderInsights(); renderStarters(); }
     }
   }
 
@@ -493,6 +493,7 @@
     const el = $('tab-bom');
     if (!el) return;
     if (!S.source) { el.innerHTML = '<p class="muted">Load a circuit to view its bill of materials.</p>'; return; }
+    if (S.insightsError) { el.innerHTML = `<p class="muted">BOM unavailable: ${esc(S.insightsError)}</p>`; return; }
     if (!S.insights) { el.innerHTML = '<p class="muted"><i class="fa-solid fa-spinner fa-spin"></i> Building the BOM...</p>'; return; }
     el.innerHTML = bomHtml(S.insights);
   }
