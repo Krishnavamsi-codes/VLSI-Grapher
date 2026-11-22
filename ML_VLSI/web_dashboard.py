@@ -14,7 +14,7 @@ import re
 import traceback
 import urllib.parse
 import time
-from netlist_graph_engine import (parse_verilog_netlist, parse_verilog_text, build_circuit_graph,
+from netlist_graph_engine import (parse_verilog_netlist, parse_verilog_text, build_circuit_graph, build_circuit_model,
                                   NetlistParseError, CLASS_NAMES, CLASS_COLORS)
 from gnn_engine import CircuitGNN, extract_subcircuit_boundaries
 import gnn_re_inference
@@ -1059,11 +1059,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                                   upload_id=query.get('upload_id', [None])[0])
             parsed = _load_parsed(ref)
             nodes, edges, feats, labels = build_circuit_graph(parsed)
+            model, _ = SERVICE.load(ref)   # bit-level ports for the header stats
             self._send_json(200, {
                 'module_name': parsed['module_name'],
                 'source': ref.kind,
                 'nodes': nodes,
-                'edges': edges
+                'edges': edges,
+                'inputs': model['primary_inputs'],
+                'outputs': model['primary_outputs']
             })
         elif path == '/api/bom.csv':
             # cell bill of materials (counts from the netlist; area/leakage only if a liberty file is loaded)
@@ -1127,13 +1130,16 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 raise NetlistParseError('No gate instances found.')
             upload_id = circuit_store.save_upload(content)
             nodes, edges, feats, labels = build_circuit_graph(parsed)
+            model = build_circuit_model(text=content)   # bit-level ports for the header stats
             self._send_json(200, {
                 'upload_id': upload_id,
                 'display_name': display_name,
                 'module_name': parsed['module_name'],
                 'source': 'upload',
                 'nodes': nodes,
-                'edges': edges
+                'edges': edges,
+                'inputs': model['primary_inputs'],
+                'outputs': model['primary_outputs']
             })
 
         elif path == '/api/infer':

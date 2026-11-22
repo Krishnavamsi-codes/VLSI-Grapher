@@ -4,6 +4,9 @@ scipy>=1.13
 scikit-learn>=1.6
 pandas>=2.2
 
+# Novel model training (GNN-RE/runs/novel/novel.py); the app only reads its exported predictions
+lightgbm>=4.0
+
 # Tests
 pytest>=7.4
 
